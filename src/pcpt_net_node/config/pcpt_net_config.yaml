@@ -1,0 +1,44 @@
+#模型推理 - 低矮障碍物（屏蔽下边人车即可）
+# version:            3       # 2:旧雷达驱动  3:新雷达驱动
+# modelType:          2       # 0:为centerPoint人车  1:pointPillars人车  2:pointPillars低矮障碍物
+# lidarHeight:        1.68    # 雷达安装高度
+# anchorFile:         /home/stcv/map_config/model/low_obst_8_3/anchor_mul.bin
+# sensorNameRs16:     /MiddleRsBpLidar/car_filtered_points/multiFrame             #人车点云
+# sensorNameRsBp:     /MiddleRsBpLidar/car_filtered_points                        #低矮障碍物多帧点云
+# istest:             false                                                       #是否测试
+# isOnnx2EngineFile:  false                                                       #是否重新生成engine文件
+# testFileName:       /home/stcv/map_config/model/anchor/2.bin                    #测试文件
+# onnxFile:           /home/stcv/map_config/model/low_obst_8_3/low_obst.onnx      #onnx文件
+# generateEngineFile: /home/stcv/map_config/model/low_obst_8_3/low_obst_agx.bin   #待生成engine文件
+# modelFile:          /home/stcv/map_config/model/low_obst_8_3/low_obst_agx.bin   #模型文件（即生成的engine文件）
+
+#模型推理 - 人车(屏蔽上边低矮障碍物即可)
+version:            3       # 2:旧雷达驱动  3:新雷达驱动
+modelType:          1       # 0:为centerPoint人车  1:pointPillars人车  2:pointPillars低矮障碍物
+lidarHeight:        1.68    # 雷达安装高度
+anchorFile:         /home/stcv/map_config/model/man_car_3_28/anchor.bin
+sensorNameRs16:     /MainLidar/car_filtered_points                              #人车点云
+sensorNameRsBp:     /MainLidar/car_filtered_points                              #低矮障碍物多帧点云
+istest:             false                                                       #是否测试
+isOnnx2EngineFile:  false                                                       #是否重新生成engine文件
+testFileName:       /home/stcv/map_config/model/anchor/1.bin                    #测试文件
+onnxFile:           /home/stcv/map_config/model/man_car_3_28/man_car.onnx       #onnx文件
+generateEngineFile: /home/stcv/map_config/model/man_car_3_28/man_car_agx.bin    #待生成engine文件
+modelFile:          /home/stcv/map_config/model/man_car_3_28/man_car_agx.bin    #模型文件（即生成的engine文件）
+
+
+#去畸变
+isUndistor:         false                                           #是否去畸变
+lidarTopic:         "/MiddleRsBpLidar/car_filtered_points"
+imuTopic:           "/yis_imu"
+imu2LidarRot:       [-1, 0, 0, 0, -1, 0, 0, 0, 1]
+imu2LidarRPY:       [ 1, 0, 0, 0,  1, 0, 0, 0, 1]
+
+#多帧处理
+isSaveMulti:        false                                           #是否保存多帧
+savePcdDir:         /home/stcv/datas/pcd/
+saveBinDir:         /home/stcv/datas/bin/
+startFrameId:       0                                               #生成多帧数据编号 默认 startFrameId + 1 为保存多帧开始Id
+isLidarNewDrive:    false                                           #雷达驱动 新旧选择
+isLocalMap:         false                                           #是否启用局部定位
+

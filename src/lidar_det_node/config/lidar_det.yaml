@@ -1,0 +1,27 @@
+# lidar_det_node parameters (loaded into the node's private namespace).
+backend: transfusion
+
+# Absolute model asset paths. Engines are PER-PLATFORM: regenerate on Orin.
+# Leave empty to fall back to TransFusion::Config defaults (../model/...).
+scn_onnx:    "/home/ly/Saite/3D_target_detection/deploy/Lidar_orin_Solution/TransFusion/model/transfusion_fast30.scn.onnx"
+bev_weights: "/home/ly/Saite/3D_target_detection/deploy/Lidar_orin_Solution/TransFusion/model/sparse_backbone_weights_fast30.bin"
+bev_engine:  "/home/ly/Saite/3D_target_detection/deploy/Lidar_orin_Solution/TransFusion/model/transfusion_bev_fast30_x86.engine"
+head_engine: "/home/ly/Saite/3D_target_detection/deploy/Lidar_orin_Solution/TransFusion/model/transfusion_head_fast30_fp16.engine"
+
+feature_num: 5
+verbose: false
+
+# ROS I/O (kept compatible with the original pcpt_net_node contract).
+input_topic:  "/MainLidar/trans_points"
+output_topic: "/trans_net/box"
+marker_topic: "/detect_box_markers"
+frame_id:     ""          # empty => reuse incoming cloud header.frame_id
+lidar_height: 1.68
+score_threshold: 0.1
+
+# nuScenes class id (string key) -> comm_msg/label.msg value. Overrides the
+# built-in default map; only listed ids are changed.
+class_map:
+  "0": 4    # car        -> CAR
+  "7": 3    # bicycle    -> BICYCLE
+  "8": 1    # pedestrian -> PEDESTRIAN

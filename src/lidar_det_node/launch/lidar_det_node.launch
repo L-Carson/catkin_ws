@@ -1,0 +1,7 @@
+<launch>
+  <arg name="config" default="$(find lidar_det_node)/config/lidar_det.yaml"/>
+
+  <node pkg="lidar_det_node" type="lidar_det_node" name="lidar_det_node" output="screen">
+    <rosparam command="load" file="$(arg config)"/>
+  </node>
+</launch>

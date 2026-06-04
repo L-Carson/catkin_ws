@@ -1,0 +1,9 @@
+
+<launch>
+
+    <node pkg="pcpt_net_node" type="pcpt_net_node" name="pcpt_net_node" output="screen">
+    </node>
+    
+</launch>
+
+
