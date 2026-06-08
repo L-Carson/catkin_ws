@@ -9,12 +9,14 @@
 // and is identical on x86 and Orin.
 
 #include <cstdint>
+#include <filesystem>
 #include <map>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+#include <ros/package.h>
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <visualization_msgs/Marker.h>
@@ -48,6 +50,78 @@ std::unordered_map<int, int> defaultClassMap() {
     };
 }
 
+namespace fs = std::filesystem;
+
+std::string absolutePath(const fs::path& p) {
+    std::error_code ec;
+    const fs::path canon = fs::weakly_canonical(p, ec);
+    return ec ? fs::absolute(p).lexically_normal().string() : canon.string();
+}
+
+bool isExistingDir(const std::string& path) {
+    std::error_code ec;
+    return !path.empty() && fs::is_directory(fs::path(path), ec) && !ec;
+}
+
+// Default filenames match TransFusion::Config (transfusion.hpp).
+std::string autoTransFusionModelDir() {
+    const std::string pkg = ros::package::getPath("lidar_det_node");
+    if (pkg.empty()) return "";
+
+    const fs::path rel =
+        "../../../3d_target_detection/deploy/Lidar_orin_Solution/TransFusion/model";
+    const std::string candidate = absolutePath(fs::path(pkg) / rel);
+    return isExistingDir(candidate) ? candidate : "";
+}
+
+std::string joinModelPath(const std::string& model_dir, const std::string& path) {
+    if (path.empty()) return path;
+    const fs::path p(path);
+    if (p.is_absolute()) return absolutePath(p);
+    if (model_dir.empty()) return path;
+    return absolutePath(fs::path(model_dir) / p);
+}
+
+void resolveDetectorModelPaths(lidar_det::DetectorConfig& cfg) {
+    if (cfg.model_dir.empty()) {
+        cfg.model_dir = autoTransFusionModelDir();
+    } else {
+        const fs::path p(cfg.model_dir);
+        if (!p.is_absolute()) {
+            const std::string pkg = ros::package::getPath("lidar_det_node");
+            if (!pkg.empty()) {
+                cfg.model_dir = absolutePath(fs::path(pkg) / p);
+            }
+        } else {
+            cfg.model_dir = absolutePath(p);
+        }
+    }
+
+    if (cfg.scn_onnx.empty()) {
+        cfg.scn_onnx = "transfusion_fast30.scn.onnx";
+    }
+    if (cfg.bev_weights.empty()) {
+        cfg.bev_weights = "sparse_backbone_weights_fast30.bin";
+    }
+    if (cfg.bev_engine.empty()) {
+        cfg.bev_engine = "transfusion_bev_fast30_h100.engine";
+    }
+    if (cfg.head_engine.empty()) {
+        cfg.head_engine = "transfusion_head_fast30_fp16.engine";
+    }
+
+    cfg.scn_onnx    = joinModelPath(cfg.model_dir, cfg.scn_onnx);
+    cfg.bev_weights = joinModelPath(cfg.model_dir, cfg.bev_weights);
+    cfg.bev_engine  = joinModelPath(cfg.model_dir, cfg.bev_engine);
+    cfg.head_engine = joinModelPath(cfg.model_dir, cfg.head_engine);
+
+    ROS_INFO("model_dir=%s", cfg.model_dir.c_str());
+    ROS_INFO("scn_onnx=%s", cfg.scn_onnx.c_str());
+    ROS_INFO("bev_weights=%s", cfg.bev_weights.c_str());
+    ROS_INFO("bev_engine=%s", cfg.bev_engine.c_str());
+    ROS_INFO("head_engine=%s", cfg.head_engine.c_str());
+}
+
 }  // namespace
 
 class LidarDetAdapter {
@@ -73,6 +147,7 @@ public:
         pnh.param("verbose", cfg.verbose, false);
 
         loadClassMap(pnh);
+        resolveDetectorModelPaths(cfg);
 
         // --- backend ------------------------------------------------------
         detector_ = lidar_det::CreateLidarDetector(cfg);

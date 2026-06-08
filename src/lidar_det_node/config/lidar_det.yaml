@@ -1,12 +1,14 @@
 # lidar_det_node parameters (loaded into the node's private namespace).
 backend: transfusion
 
-# Absolute model asset paths. Engines are PER-PLATFORM: regenerate on Orin.
-# Leave empty to fall back to TransFusion::Config defaults (../model/...).
-scn_onnx:    "/home/ly/Saite/3D_target_detection/deploy/Lidar_orin_Solution/TransFusion/model/transfusion_fast30.scn.onnx"
-bev_weights: "/home/ly/Saite/3D_target_detection/deploy/Lidar_orin_Solution/TransFusion/model/sparse_backbone_weights_fast30.bin"
-bev_engine:  "/home/ly/Saite/3D_target_detection/deploy/Lidar_orin_Solution/TransFusion/model/transfusion_bev_fast30_x86.engine"
-head_engine: "/home/ly/Saite/3D_target_detection/deploy/Lidar_orin_Solution/TransFusion/model/transfusion_head_fast30_fp16.engine"
+# Model assets under TransFusion/model (relative to model_dir).
+# model_dir empty => auto: <lidar_det_node pkg>/../../../3d_target_detection/.../TransFusion/model
+# File names empty => use the defaults below. Engines are per-platform (rebuild on Orin).
+model_dir: ""
+scn_onnx:    "transfusion_fast30.scn.onnx"
+bev_weights: "sparse_backbone_weights_fast30.bin"
+bev_engine:  "transfusion_bev_fast30_h100.engine"
+head_engine: "transfusion_head_fast30_fp16.engine"
 
 feature_num: 5
 verbose: false
