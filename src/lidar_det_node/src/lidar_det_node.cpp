@@ -68,10 +68,18 @@ std::string autoTransFusionModelDir() {
     const std::string pkg = ros::package::getPath("lidar_det_node");
     if (pkg.empty()) return "";
 
-    const fs::path rel =
-        "../../../3d_target_detection/deploy/Lidar_orin_Solution/TransFusion/model";
-    const std::string candidate = absolutePath(fs::path(pkg) / rel);
-    return isExistingDir(candidate) ? candidate : "";
+    // Priority: vendored (devel/source tree) -> installed (share) -> the
+    // original TransFusion source tree (developer machines).
+    const std::vector<std::string> rels = {
+        "vendor/model",
+        "model",
+        "../../../3d_target_detection/deploy/Lidar_orin_Solution/TransFusion/model",
+    };
+    for (const auto& rel : rels) {
+        const std::string cand = absolutePath(fs::path(pkg) / rel);
+        if (isExistingDir(cand)) return cand;
+    }
+    return "";
 }
 
 std::string joinModelPath(const std::string& model_dir, const std::string& path) {

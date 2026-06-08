@@ -1,9 +1,10 @@
 # lidar_det_node parameters (loaded into the node's private namespace).
 backend: transfusion
 
-# Model assets under TransFusion/model (relative to model_dir).
-# model_dir empty => auto: <lidar_det_node pkg>/../../../3d_target_detection/.../TransFusion/model
-# File names empty => use the defaults below. Engines are per-platform (rebuild on Orin).
+# Model assets (relative to model_dir).
+# model_dir empty => auto-detect: vendor/model -> share/lidar_det_node/model
+#                                 -> 3d_target_detection/.../TransFusion/model
+# File names empty => use the defaults below. Engines are per-platform/TRT-version.
 model_dir: ""
 scn_onnx:    "transfusion_fast30.scn.onnx"
 bev_weights: "sparse_backbone_weights_fast30.bin"

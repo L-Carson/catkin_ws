@@ -1,8 +1,8 @@
 <launch>
   <arg name="config" default="$(find lidar_det_node)/config/lidar_det.yaml"/>
-  <!-- Relative to lidar_det_node package (same layout as CMake auto-detect). -->
-  <arg name="model_dir"
-       default="$(find lidar_det_node)/../../../3d_target_detection/deploy/Lidar_orin_Solution/TransFusion/model"/>
+  <!-- Empty => node auto-detects vendored models (vendor/model or share/model).
+       Override with an absolute/relative path only for custom model locations. -->
+  <arg name="model_dir" default=""/>
 
   <node pkg="lidar_det_node" type="lidar_det_node" name="lidar_det_node" output="screen">
     <rosparam command="load" file="$(arg config)"/>

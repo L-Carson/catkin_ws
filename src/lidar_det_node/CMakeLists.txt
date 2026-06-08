@@ -88,9 +88,16 @@ if(_tf_backend_user)
   endif()
 endif()
 
+# Vendored prebuilt libs shipped inside this package. Preferred for deployment:
+# reuses libtransfusion_backend.so as-is (never rebuilds the heavy backend) and
+# needs no TransFusion source/build tree on the target machine.
+set(_vendor_lib_dir "${CMAKE_CURRENT_SOURCE_DIR}/vendor/lib")
+
 set(TRANSFUSION_BACKEND_LIB_RESOLVED "")
 if(_tf_backend_user)
   set(TRANSFUSION_BACKEND_LIB_RESOLVED "${_tf_backend_user}")
+elseif(EXISTS "${_vendor_lib_dir}/libtransfusion_backend.so")
+  set(TRANSFUSION_BACKEND_LIB_RESOLVED "${_vendor_lib_dir}/libtransfusion_backend.so")
 elseif(TRANSFUSION_ROOT_DIR)
   set(TRANSFUSION_BACKEND_LIB_RESOLVED
     "${TRANSFUSION_ROOT_DIR}/build/libtransfusion_backend.so")
@@ -115,6 +122,8 @@ endif()
 set(LIBSPCONV_DIR_RESOLVED "")
 if(_libspconv_user)
   set(LIBSPCONV_DIR_RESOLVED "${_libspconv_user}")
+elseif(EXISTS "${_vendor_lib_dir}/libspconv.so")
+  set(LIBSPCONV_DIR_RESOLVED "${_vendor_lib_dir}")
 elseif(TRANSFUSION_ROOT_DIR)
   set(_libspconv_lib_root
     "${TRANSFUSION_ROOT_DIR}/../CenterPoint/3rdparty/libspconv/lib")
@@ -163,26 +172,50 @@ endif()
 
 get_filename_component(_backend_dir "${TRANSFUSION_BACKEND_LIB_RESOLVED}" DIRECTORY)
 
-set(_lidar_det_rpath "${_backend_dir}")
+set(_libspconv_so "")
 if(LIBSPCONV_DIR_RESOLVED)
-  set(_lidar_det_rpath "${_backend_dir};${LIBSPCONV_DIR_RESOLVED}")
-elseif(TRANSFUSION_ROOT_DIR)
+  set(_libspconv_so "${LIBSPCONV_DIR_RESOLVED}/libspconv.so")
+else()
   message(WARNING
-    "lidar_det_node: libspconv not found under "
-    "${TRANSFUSION_ROOT_DIR}/../CenterPoint/3rdparty/libspconv/lib; "
-    "runtime may fail to load transfusion_backend")
+    "lidar_det_node: libspconv.so not found; runtime may fail to load "
+    "transfusion_backend")
+endif()
+
+# Stage the prebuilt .so right next to the node executable in the devel space.
+# The binary then locates them through a relocatable $ORIGIN rpath -- no
+# absolute paths and no LD_LIBRARY_PATH, so copying the workspace to another
+# Orin (even at a different path) just works.
+set(_runtime_libdir "${CATKIN_DEVEL_PREFIX}/lib/${PROJECT_NAME}")
+file(MAKE_DIRECTORY "${_runtime_libdir}")
+file(COPY "${TRANSFUSION_BACKEND_LIB_RESOLVED}" DESTINATION "${_runtime_libdir}")
+if(_libspconv_so)
+  file(COPY "${_libspconv_so}" DESTINATION "${_runtime_libdir}")
+endif()
+
+# Force a direct DT_NEEDED on libspconv.so (the node uses no spconv symbols, so
+# --no-as-needed prevents the linker from dropping it). The executable then
+# loads the co-located libspconv via its own $ORIGIN rpath before
+# libtransfusion_backend.so needs it -- which is why no patchelf / no
+# LD_LIBRARY_PATH is required to relocate the bundle.
+set(_lidar_det_force_libs "")
+if(_libspconv_so)
+  set(_lidar_det_force_libs -Wl,--no-as-needed "${_libspconv_so}" -Wl,--as-needed)
 endif()
 
 target_link_libraries(${PROJECT_NAME}
   ${TRANSFUSION_BACKEND_LIB_RESOLVED}
+  ${_lidar_det_force_libs}
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
 )
 
-# Find the backend .so and its transitive libspconv at runtime.
+# $ORIGIN first (relocatable). Old dtags (DT_RPATH) make $ORIGIN apply to the
+# transitive libspconv that libtransfusion_backend.so itself needs. The abs
+# dirs stay as a developer-machine fallback.
 set_target_properties(${PROJECT_NAME} PROPERTIES
-  BUILD_RPATH   "${_lidar_det_rpath}"
-  INSTALL_RPATH "${_lidar_det_rpath}"
+  BUILD_RPATH   "\$ORIGIN;${_backend_dir};${LIBSPCONV_DIR_RESOLVED}"
+  INSTALL_RPATH "\$ORIGIN"
+  LINK_FLAGS    "-Wl,--disable-new-dtags"
 )
 
 # Disk .bin -> PointCloud2 replayer (no backend dependency; for offline testing).
@@ -193,7 +226,19 @@ target_link_libraries(bin_cloud_publisher ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 install(TARGETS ${PROJECT_NAME} bin_cloud_publisher
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+# Ship the prebuilt .so next to the installed executable (matches $ORIGIN rpath)
+# and the model assets into the package share dir.
+install(FILES "${TRANSFUSION_BACKEND_LIB_RESOLVED}"
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+if(_libspconv_so)
+  install(FILES "${_libspconv_so}"
+    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+endif()
 install(DIRECTORY config launch
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+  OPTIONAL
+)
+install(DIRECTORY vendor/model
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
   OPTIONAL
 )
