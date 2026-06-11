@@ -84,7 +84,7 @@ class movTargetsArray {
 
   static md5sum() {
     //Returns md5sum for a message object
-    return 'b0324d7e29ce331fa6a17d56ed1c1412';
+    return '53e285a8a0457018273219b388ef9a2c';
   }
 
   static messageDefinition() {
@@ -130,6 +130,7 @@ class movTargetsArray {
     float32 vel_x   #m/s
     float32 vel_y   #m/s
     float32 vel_z   #m/s
+    float32 score   #detection confidence [0,1]
     ================================================================================
     MSG: comm_msg/label
     #Note: 枚举类别、枚举值、枚举顺序均不可随意改动，不然md5不匹配，消息将无法正常解析

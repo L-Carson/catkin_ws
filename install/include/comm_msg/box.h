@@ -35,7 +35,8 @@ struct box_
     , yaw(0.0)
     , vel_x(0.0)
     , vel_y(0.0)
-    , vel_z(0.0)  {
+    , vel_z(0.0)
+    , score(0.0)  {
     }
   box_(const ContainerAllocator& _alloc)
     : label(_alloc)
@@ -48,7 +49,8 @@ struct box_
     , yaw(0.0)
     , vel_x(0.0)
     , vel_y(0.0)
-    , vel_z(0.0)  {
+    , vel_z(0.0)
+    , score(0.0)  {
   (void)_alloc;
     }
 
@@ -86,6 +88,9 @@ struct box_
 
    typedef float _vel_z_type;
   _vel_z_type vel_z;
+
+   typedef float _score_type;
+  _score_type score;
 
 
 
@@ -126,7 +131,8 @@ bool operator==(const ::comm_msg::box_<ContainerAllocator1> & lhs, const ::comm_
     lhs.yaw == rhs.yaw &&
     lhs.vel_x == rhs.vel_x &&
     lhs.vel_y == rhs.vel_y &&
-    lhs.vel_z == rhs.vel_z;
+    lhs.vel_z == rhs.vel_z &&
+    lhs.score == rhs.score;
 }
 
 template<typename ContainerAllocator1, typename ContainerAllocator2>
@@ -183,12 +189,12 @@ struct MD5Sum< ::comm_msg::box_<ContainerAllocator> >
 {
   static const char* value()
   {
-    return "010e5d8fbb7da500e9e709e85fe17d1f";
+    return "618e70daa50994025209be81c63708e7";
   }
 
   static const char* value(const ::comm_msg::box_<ContainerAllocator>&) { return value(); }
-  static const uint64_t static_value1 = 0x010e5d8fbb7da500ULL;
-  static const uint64_t static_value2 = 0xe9e709e85fe17d1fULL;
+  static const uint64_t static_value1 = 0x618e70daa5099402ULL;
+  static const uint64_t static_value2 = 0x5209be81c63708e7ULL;
 };
 
 template<class ContainerAllocator>
@@ -218,6 +224,7 @@ struct Definition< ::comm_msg::box_<ContainerAllocator> >
 "float32 vel_x   #m/s\n"
 "float32 vel_y   #m/s\n"
 "float32 vel_z   #m/s\n"
+"float32 score   #detection confidence [0,1]\n"
 "================================================================================\n"
 "MSG: comm_msg/label\n"
 "#Note: 枚举类别、枚举值、枚举顺序均不可随意改动，不然md5不匹配，消息将无法正常解析\n"
@@ -310,6 +317,7 @@ namespace serialization
       stream.next(m.vel_x);
       stream.next(m.vel_y);
       stream.next(m.vel_z);
+      stream.next(m.score);
     }
 
     ROS_DECLARE_ALLINONE_SERIALIZER
@@ -351,6 +359,8 @@ struct Printer< ::comm_msg::box_<ContainerAllocator> >
     Printer<float>::stream(s, indent + "  ", v.vel_y);
     s << indent << "vel_z: ";
     Printer<float>::stream(s, indent + "  ", v.vel_z);
+    s << indent << "score: ";
+    Printer<float>::stream(s, indent + "  ", v.score);
   }
 };
 

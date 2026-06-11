@@ -14,6 +14,14 @@ head_engine: "transfusion_head_fast30_fp16.engine"
 feature_num: 5
 verbose: false
 
+# Runtime diagnostics (ST_LOG -> log_file). Set debug_stats: false to silence
+# periodic frame/summary logs while keeping ERR/WARN and first-cloud log.
+debug_stats: true
+stats_interval: 30       # P0/P1: log every N frames (pts/raw/kept/infer_ms)
+summary_interval: 60     # P2: class-count summary every N frames
+input_timeout_sec: 1.0   # P1: WARN if no cloud for this many seconds
+health_topic: "/lidar_det/health"   # P3: Float32MultiArray; "" to disable
+
 # ST_LOG output file. "" => stdout (captured by roslaunch / wrapper redirect).
 # Leading "~" expands to $HOME. Separate from the navZero wrapper's stdout log
 # (lidar_det_node.log) to avoid two writers on one file.

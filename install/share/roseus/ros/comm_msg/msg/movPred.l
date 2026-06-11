@@ -64,7 +64,7 @@
    self)
   )
 
-(setf (get comm_msg::movPred :md5sum-) "76372f1cf63bb189fc9bb9cd43dbfca9")
+(setf (get comm_msg::movPred :md5sum-) "f24e6d2870e7907336df86d90f0381cc")
 (setf (get comm_msg::movPred :datatype-) "comm_msg/movPred")
 (setf (get comm_msg::movPred :definition-)
       "float64 timeStamp
@@ -83,6 +83,7 @@ float32 yaw     #rotated by z, radian(not a angle)
 float32 vel_x   #m/s
 float32 vel_y   #m/s
 float32 vel_z   #m/s
+float32 score   #detection confidence [0,1]
 ================================================================================
 MSG: comm_msg/label
 #Note: 枚举类别、枚举值、枚举顺序均不可随意改动，不然md5不匹配，消息将无法正常解析
@@ -150,6 +151,6 @@ uint8 value
 
 
 
-(provide :comm_msg/movPred "76372f1cf63bb189fc9bb9cd43dbfca9")
+(provide :comm_msg/movPred "f24e6d2870e7907336df86d90f0381cc")
 
 

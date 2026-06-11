@@ -21,4 +21,6 @@
           VEL_Y
           VEL_Z-VAL
           VEL_Z
+          SCORE-VAL
+          SCORE
 ))

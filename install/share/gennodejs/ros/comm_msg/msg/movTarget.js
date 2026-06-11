@@ -69,7 +69,7 @@ class movTarget {
 
   static getMessageSize(object) {
     let length = 0;
-    length += 49 * object.movPredArray.length;
+    length += 53 * object.movPredArray.length;
     return length + 8;
   }
 
@@ -80,7 +80,7 @@ class movTarget {
 
   static md5sum() {
     //Returns md5sum for a message object
-    return 'ebdd992367f43878f672e9039c790714';
+    return 'f19f5e2e1e8db282172e91085f81c027';
   }
 
   static messageDefinition() {
@@ -106,6 +106,7 @@ class movTarget {
     float32 vel_x   #m/s
     float32 vel_y   #m/s
     float32 vel_z   #m/s
+    float32 score   #detection confidence [0,1]
     ================================================================================
     MSG: comm_msg/label
     #Note: 枚举类别、枚举值、枚举顺序均不可随意改动，不然md5不匹配，消息将无法正常解析

@@ -30,6 +30,7 @@ class box {
       this.vel_x = null;
       this.vel_y = null;
       this.vel_z = null;
+      this.score = null;
     }
     else {
       if (initObj.hasOwnProperty('label')) {
@@ -98,6 +99,12 @@ class box {
       else {
         this.vel_z = 0.0;
       }
+      if (initObj.hasOwnProperty('score')) {
+        this.score = initObj.score
+      }
+      else {
+        this.score = 0.0;
+      }
     }
   }
 
@@ -125,6 +132,8 @@ class box {
     bufferOffset = _serializer.float32(obj.vel_y, buffer, bufferOffset);
     // Serialize message field [vel_z]
     bufferOffset = _serializer.float32(obj.vel_z, buffer, bufferOffset);
+    // Serialize message field [score]
+    bufferOffset = _serializer.float32(obj.score, buffer, bufferOffset);
     return bufferOffset;
   }
 
@@ -154,11 +163,13 @@ class box {
     data.vel_y = _deserializer.float32(buffer, bufferOffset);
     // Deserialize message field [vel_z]
     data.vel_z = _deserializer.float32(buffer, bufferOffset);
+    // Deserialize message field [score]
+    data.score = _deserializer.float32(buffer, bufferOffset);
     return data;
   }
 
   static getMessageSize(object) {
-    return 41;
+    return 45;
   }
 
   static datatype() {
@@ -168,7 +179,7 @@ class box {
 
   static md5sum() {
     //Returns md5sum for a message object
-    return '010e5d8fbb7da500e9e709e85fe17d1f';
+    return '618e70daa50994025209be81c63708e7';
   }
 
   static messageDefinition() {
@@ -185,6 +196,7 @@ class box {
     float32 vel_x   #m/s
     float32 vel_y   #m/s
     float32 vel_z   #m/s
+    float32 score   #detection confidence [0,1]
     ================================================================================
     MSG: comm_msg/label
     #Note: 枚举类别、枚举值、枚举顺序均不可随意改动，不然md5不匹配，消息将无法正常解析
@@ -332,6 +344,13 @@ class box {
     }
     else {
       resolved.vel_z = 0.0
+    }
+
+    if (msg.score !== undefined) {
+      resolved.score = msg.score;
+    }
+    else {
+      resolved.score = 0.0
     }
 
     return resolved;

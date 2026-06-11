@@ -155,6 +155,7 @@ int PCPT_INFERENCE_C::NetDoInference(float* pointsNetArray, int inNumPoints, vec
         tmpBox.length = outData[i].length;
         tmpBox.height = outData[i].height;
         tmpBox.yaw    = outData[i].angle;
+        tmpBox.score  = outData[i].score;
         sendBoxArray.boxes.push_back(tmpBox);
     }
 

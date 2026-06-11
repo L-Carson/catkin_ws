@@ -9,3 +9,4 @@ float32 yaw     #rotated by z, radian(not a angle)
 float32 vel_x   #m/s
 float32 vel_y   #m/s
 float32 vel_z   #m/s
+float32 score   #detection confidence [0,1]
