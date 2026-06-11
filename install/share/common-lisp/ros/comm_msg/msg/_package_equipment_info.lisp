@@ -1,0 +1,16 @@
+(cl:in-package comm_msg-msg)
+(cl:export '(STATUS-VAL
+          STATUS
+          EQUIPMENTTYPE-VAL
+          EQUIPMENTTYPE
+          QRCODEID-VAL
+          QRCODEID
+          QRCODEPOSE-VAL
+          QRCODEPOSE
+          QRCODEOFFSET-VAL
+          QRCODEOFFSET
+          REFLECTIVESTRIPPOSLEFT-VAL
+          REFLECTIVESTRIPPOSLEFT
+          REFLECTIVESTRIPPOSRIGHT-VAL
+          REFLECTIVESTRIPPOSRIGHT
+))

@@ -1,0 +1,15 @@
+(cl:defpackage comm_srvs-msg
+  (:use )
+  (:export
+   "<LIDARINSTALLPARAM>"
+   "LIDARINSTALLPARAM"
+   "<CAMERAPARAM>"
+   "CAMERAPARAM"
+   "<SENSORINSTALLPARAM>"
+   "SENSORINSTALLPARAM"
+   "<VISIONFUNCCFG>"
+   "VISIONFUNCCFG"
+   "<VISIONLABELCFG>"
+   "VISIONLABELCFG"
+  ))
+

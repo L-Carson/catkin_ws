@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CfgParam ver="V01.11.238.000">
+    <Gnss isSupport="true" protocolType="0" isDualAntenna="true" devName="/dev/ttyS0" baudRate="115200" >
+        <InstallParam Tx="-0.435" Ty="0.0" Tz="1.417" Roll="0.0" Pitch="0.0" Yaw="0.0" />
+    </Gnss>
+    <Imu isSupport="true" type="2" devName="/dev/ttyS2" baudRate="115200" isModifyGyroZ="false" >
+        <Offset Tx="0.0" Ty="0.0" Tz="0.0" Roll="0.0" Pitch="0.0" Yaw="0.0" />
+        <InstallParam Tx="-0.012" Ty="0.0" Tz="1.336" Roll="0.0" Pitch="0.0" Yaw="0.0" />
+    </Imu>
+    <LocLidar isSupport="true">
+        <InstallParam Tx="0.0" Ty="0.0" Tz="0.0" Roll="0.0" Pitch="0.0" Yaw="0.0" />
+    </LocLidar>
+    <BackDepthCamera isSupport="false" />
+    <UltrasonicGroup isSupport="false" />
+    <TofGroup isSupport="false" />
+    <CameraGroup>
+        <front_left isSupport="false">
+            <Property PortName="/dev/MyVideo0" ImgHeight="720" ImgWidth="1280" FrameHz="25" />
+            <CameraMatrix Data="0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0" />
+            <DistortionCoefficients Data="0.0, 0.0, 0.0, 0.0, 0.0" />
+            <InstallParam Tx="0.0" Ty="0.0" Tz="0.0" Roll="0.0" Pitch="0.0" Yaw="0.0" />
+        </front_left>
+        <front_mid isSupport="false">
+            <Property PortName="/dev/MyVideo1" ImgHeight="720" ImgWidth="1280" FrameHz="25" />
+            <CameraMatrix Data="0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0" />
+            <DistortionCoefficients Data="0.0, 0.0, 0.0, 0.0, 0.0" />
+            <InstallParam Tx="0.0" Ty="0.0" Tz="0.0" Roll="0.0" Pitch="0.0" Yaw="0.0" />
+        </front_mid>
+        <front_right isSupport="false">
+            <Property PortName="/dev/MyVideo2" ImgHeight="720" ImgWidth="1280" FrameHz="25" />
+            <CameraMatrix Data="0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0" />
+            <DistortionCoefficients Data="0.0, 0.0, 0.0, 0.0, 0.0" />
+            <InstallParam Tx="0.0" Ty="0.0" Tz="0.0" Roll="0.0" Pitch="0.0" Yaw="0.0" />
+        </front_right>
+        <rear_mid isSupport="false">
+            <Property PortName="/dev/MyVideo3" ImgHeight="720" ImgWidth="1280" FrameHz="25" />
+            <CameraMatrix Data="0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0" />
+            <DistortionCoefficients Data="0.0, 0.0, 0.0, 0.0, 0.0" />
+            <InstallParam Tx="0.0" Ty="0.0" Tz="0.0" Roll="0.0" Pitch="0.0" Yaw="0.0" />
+        </rear_mid>
+        <front_mid_left isSupport="false">
+            <Property PortName="/dev/MyVideo4" ImgHeight="720" ImgWidth="1280" FrameHz="25" />
+            <CameraMatrix Data="0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0" />
+            <DistortionCoefficients Data="0.0, 0.0, 0.0, 0.0, 0.0" />
+            <InstallParam Tx="0.0" Ty="0.0" Tz="0.0" Roll="0.0" Pitch="0.0" Yaw="0.0" />
+        </front_mid_left>
+        <front_mid_right isSupport="false">
+            <Property PortName="/dev/MyVideo5" ImgHeight="720" ImgWidth="1280" FrameHz="25" />
+            <CameraMatrix Data="0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0" />
+            <DistortionCoefficients Data="0.0, 0.0, 0.0, 0.0, 0.0" />
+            <InstallParam Tx="0.0" Ty="0.0" Tz="0.0" Roll="0.0" Pitch="0.0" Yaw="0.0" />
+        </front_mid_right>
+    </CameraGroup>
+    <LidarGroup>
+        <Offset Tx="0.0" Ty="0.0" Tz="0.0" Roll="0.0" Pitch="0.0" Yaw="0.0" />
+        <MainLidar>
+            <!-- LidarType: RS16, RSHELIOS_16P(RSHELIOS_16), LS_C16 -->
+            <Property LidarType="LS_C16" IsSupportLoc="true" IsSupportPnp="true" IsSupportDustFilter="false" IsSupportShadowFilter="true" LidarSerialNum = "sn"/>
+            <NetCfg Ip="192.168.1.201" MsopPort="6701" DifopPort="7801" ImuPort="8901" />
+            <DistParam MaxDist="80.0" />
+            <InstallParam Tx="0.18" Ty="0" Tz="1.6" Roll="0.0" Pitch="0.0" Yaw="0.0" />
+        </MainLidar>
+        <BlindLidar>
+            <!-- LidarType: RSBP, RSAIRY, LIVOX_MID_360 -->
+            <Property LidarType="RSBP" IsSupportLoc="false" IsSupportPnp="true" IsSupportDustFilter="false" IsSupportShadowFilter="true" LidarSerialNum = "sn"/>
+            <NetCfg Ip="192.168.1.202" MsopPort="6702" DifopPort="7802" ImuPort="8902" />
+            <DistParam MaxDist="30.0" />
+            <InstallParam Tx="-0.54" Ty="0.51" Tz="1.34" Roll="0.0" Pitch="0.0" Yaw="115.5" />
+            <SectionWipe StartAngle="-93" EndAngle="3" MinDist="0" MaxDist="30" MinHeight="-5.0" MaxHeight="5.0" />
+        </BlindLidar>
+        <BlindLidar2>
+            <Property LidarType="RSBP" IsSupportLoc="false" IsSupportPnp="true" IsSupportDustFilter="false" IsSupportShadowFilter="true" LidarSerialNum = "sn"/>
+            <NetCfg Ip="192.168.1.203" MsopPort="6703" DifopPort="7803" ImuPort="8903" />
+            <DistParam MaxDist="30.0" />
+            <InstallParam Tx="1.13" Ty="-0.47" Tz="1.18" Roll="0.0" Pitch="0.0" Yaw="-31.8" />
+            <SectionWipe StartAngle="87" EndAngle="185" MinDist="0" MaxDist="30" MinHeight="-5.0" MaxHeight="5.0" />
+        </BlindLidar2>
+    </LidarGroup>
+    <RadarGroup>
+        <LeftRadar isSupport="false">
+            <CollDetReg RightBottomPoint_X="40.0" RightBottomPoint_Y="0.0" LeftUpPoint_X="-40.0" LeftUpPoint_Y="40.0" />
+            <InstallParam Tx="0.05" Ty="0.5" Roll="0.0" Yaw="90" />
+        </LeftRadar>
+        <FrontRadar isSupport="false">
+            <CollDetReg RightBottomPoint_X="40.0" RightBottomPoint_Y="0.0" LeftUpPoint_X="-40.0" LeftUpPoint_Y="40.0" />
+            <InstallParam Tx="1.2" Ty="-0.04" Roll="180.0" Yaw="0.6" />
+        </FrontRadar>
+        <RightRadar isSupport="false">
+            <CollDetReg RightBottomPoint_X="40.0" RightBottomPoint_Y="0.0" LeftUpPoint_X="-40.0" LeftUpPoint_Y="40.0" />
+            <InstallParam Tx="0.05" Ty="-0.5" Roll="180.0" Yaw="-90" />
+        </RightRadar>
+        <BackRadar isSupport="false">
+            <CollDetReg RightBottomPoint_X="40.0" RightBottomPoint_Y="0.0" LeftUpPoint_X="-40.0" LeftUpPoint_Y="40.0" />
+            <InstallParam Tx="-0.36" Ty="0.0" Roll="0.0" Yaw="180" />
+        </BackRadar>
+    </RadarGroup>
+    <Pnp>
+        <CarBodyVxlFilter>
+            <FilterSize VoxelSize="0.03" MinX="-0.8" MaxX="1.6" MinY="-1" MaxY="1" MinZ="0.0" MaxZ="1.85" />
+        </CarBodyVxlFilter>
+        <PcdGroundSegmentation>
+            <HyperParam isUseRPY="true" />
+            <SegParams MaxLocalSlope="11.0" MaxGeneralSlope="11.0" MinHeightThreshold="0.1" ReclassDistThreshold="0.2" RadiusThreshold="1.0" />
+            <SegSecParams SecNums="180" LoopNums="90" MinDiffHeight="0.06" Coefficient="0.005" />
+        </PcdGroundSegmentation>
+        <PcptRegion>
+            <ObstRegion MinX="-20.0" MaxX="20.0" MinY="-20.0" MaxY="20.0" MinZ="-5.0" MaxZ="1.7" />
+        </PcptRegion>
+        <Seg2dObst MidLayerMinHeight="0.5" MidLayerMaxHeight="2.0" />
+        <ReflectVerify>
+            <DoubleLidarVerify isSupport="false">
+                <Region MinX="2.2" MaxX="5.0" MinY="-1.5" MaxY="1.5" />
+            </DoubleLidarVerify>
+            <EmergenceVerify isSupport="false">
+                <Region MinX="0.0" MaxX="5.5" MinY="-2.5" MaxY="2.5" />
+                <VerifyParam CompareRadius="0.1" KeyFrameDist="0.3" />
+            </EmergenceVerify>
+            <RoadmarkVerify isSupport="false" />
+        </ReflectVerify>
+        <ShortObstHold isSupport="true">
+            <Region MinX="-3.5" MaxX="5.0" MinY="-2.0" MaxY="2.0" />
+            <HyperParam HedgeRadius="0.6" MaxHeight="0.3" />
+        </ShortObstHold>
+        <CommonObstHold isSupport="false">
+            <MinRegion MinX="-1.5" MaxX="2.5" MinY="-1.5" MaxY="1.5" />
+            <MaxRegion MinX="-15.0" MaxX="15.0" MinY="-10.0" MaxY="10.0" />
+        </CommonObstHold>
+        <PlaneSegmentation isSupport="true">
+            <Region MinX="-4.0" MaxX="6.0" MinY="-1.2" MaxY="1.2" />
+            <HyperParam IterationTimes="5" UnitX="1.2" MaxAngleByX="8.0" MaxAngleByY="3.0" HeightThreshold="0.07" isUseVelItem="true" />
+            <DropDet isSupport="false" DropHeight="0.07" />
+        </PlaneSegmentation>
+        <PcdCluster isSupport="false">
+            <VoxelGrid Size="0.1" />
+            <RegionPartition>
+                <RegCfg OriginDistance="20.00" ClusterRadius="0.30" MinCluPointsNum="20" MaxCluPointsNum="50000" />
+            </RegionPartition>
+        </PcdCluster>
+        <PcdNet isSupport="false" />
+        <Multiframe isSupport="false" FrameNum="4" />
+        <DetectPile>
+            <QrCode VaildDist="1.5" />
+            <Dustbin BinType="1" DistThresh="0.2" NumThresh="60" />
+            <ChargingPile IntensityThreshold="180" ChargingPileHeight="1.27" OffsetY="0.0" />
+        </DetectPile>
+        <ObstState isSupport="false" StaticThreshold="0.3" />
+        <TrafficLight PixelDeviation="100" MaxDiffRatio="0.2" />
+        <AccessibleArea isSupport="true" />
+        <SlopePadDet isSupport="true" ExtandDist="0.3" />
+        <RoadRegionFilter isSupport="true" />
+        <FilterPointsRebuild isSupport="false" />
+        <Warehouse ReflectiveStripHeight="0.3" IntensityThreshold="180" />
+    </Pnp>
+    <VisionFunction isSupport="true" isUseApi="false">
+        <QRCodeDet isSupport="true" Hz="10" IPU="false" Camera="rear_mid" />
+        <NetDet isSupport="false" Hz="1" IPU="false" Camera="front_left,front_right">
+            <Bicycle        isSupport="false" />
+            <SolidCover     isSupport="false" />
+            <HollowCover    isSupport="false" />
+            <Bottle         isSupport="false" />
+            <Paper          isSupport="false" />
+            <Branch         isSupport="false" />
+            <Leaves         isSupport="false" />
+            <Cord           isSupport="false" />
+            <Pipeline       isSupport="false" />
+            <TrafficLight   isSupport="false" />
+            <TrafficCone    isSupport="false" />
+            <MetalBarrier   isSupport="false" />
+            <MedianBarrier  isSupport="false" />
+            <CeremonialPole isSupport="false" />
+            <Bollard        isSupport="false" />
+        </NetDet>
+        <NetSeg isSupport="false" Hz="1" IPU="false" Camera="front_left,front_right">
+            <SolidCover     isSupport="false" />
+            <HollowCover    isSupport="false" />
+            <RoadEdge       isSupport="false" />
+            <Pipeline       isSupport="false" />
+            <ThickPipe      isSupport="false" width="0.08" />
+            <Cordon         isSupport="false" />
+            <Treelawn       isSupport="false" />
+            <SlopePad       isSupport="false" />
+            <SpeedBump      isSupport="false" />
+        </NetSeg>
+    </VisionFunction>
+    <VehicleBody>
+        <StructureInfo model="S330" />
+        <AlongEdgeRefPoint x="1.10" y="-0.60" />
+    </VehicleBody>
+    <VehicleChassis>
+        <!-- NavIpc为default时不做变更，为其它值时可以对特定工控机类型进行对应适配处理 -->
+        <ComputingPlatform NavIpcType="default" />
+        <DcuInfo SerialDevName="/dev/ttyS3" />
+        <WheelSpeedSensor ScaleFactor="1.025" />
+        <SteeringAngleSensor ScaleFactor="1.44301933" OffsetFactor="0.01993375" />
+        <VelSmoother forwardAcc="0.4" forwardDec="1.0" backwardAcc="0.4" backwardDec="0.5" />
+        <VelLimit maxForwardVel="1.3" maxBackwardVelAbs="0.5" maxCleanVelAbs="1.0" />
+    </VehicleChassis>
+    <Plan>
+        <GloalPlan transDistOfCloseEdgeRouteForNonCleaning="0.4" isSupportTurnAround="true" isSupportRoadPortTurnAround="true" skipExecuteLen="5.0" minTurnAroundRoadWidth="4.0" />
+        <TaskMng defaultAlgoOfPatrol="1" emptyTrashMoveDist="0.0"/>
+        <LinearVelPlan MaxAngularVel="0.2" SmoothDec="0.1" VelCtrlDelayFactor="5.0" />
+        <TeleCtrl isEmergeStopSmooth="true" />
+        <LocalPlan stopFaceSafeDist="0.5" parkFaceSafeDist="0.3" maxSideSafeDistWhenAvoidAlongRoute="0.75" rangeDistGarbageBinPose="0.2" trashBoxCtrlThresh="2.0" brushShortenLen="0.0" />
+        <TimeParam waitEscapeTime="5.0" />
+        <FunctionParam isDoorCloseRequire="true" isDynamicObstStop="false" />
+    </Plan>
+    <Localization>
+        <!--FusionMethod:  0 MoveAvgFilter ;   1 KalmanFilter  2 KalmanFilter_CA -->
+        <!--MotionModel:   0 ConstantVelocity; 1 ConstantAccelVelocity -->
+        <!--ObsModel:      0 DirectObs;        1 IndirectObs           -->
+        <PoseEstimator FusionMethod="0" MotionModel="0" LidarObsModel="1" GnssObsModel="1" />
+        <LidarLoc MatchType="0" VoxelGridSize="2.0" FitnessScoreThreshold="0.4">
+            <LocLidarList>
+                <Lidar Name="MainLidar"  />
+            </LocLidarList>
+            <NDT MaxIter="30" StepSize="0.1" Resolution="1.0" TransEps="0.01" />
+            <ICP MaxIter="30" StepSize="0.1" />
+        </LidarLoc>
+        <Reloc VoxelGridSize="1.0" FitnessScoreThreshold="0.25">
+            <RawReloc isSupportStation="true" isSupportRecord="true" isSupportGnss="true" isSupportScanContext="true" isSupportImuAxisZ="true">
+                <ScanContext MaxRadius="80.0" SearchRatio="0.2" DistThreshold="1.0" NumCandidate="10" />
+            </RawReloc>
+            <FineReloc>
+                <NdtMatcher MaxIter="50" StepSize="1.0" Resolution="1.0" TransEps="0.01" />
+                <SearchRegion MinX="-2.0" MaxX="2.0" MinY="-2.0" MaxY="2.0" MinYaw="-3.14159" MaxYaw="3.14159" />
+                <SearchStep StepX=" 2.0" StepY="2.0" StepYaw=" 0.2" />
+            </FineReloc>
+        </Reloc>
+    </Localization>
+
+    <Mapping>
+        <DataProc SatelliteNum="14" ContinueTime="100" />
+        <FrontEnd MapIncDistThreshold="0.3" MapIncAngleThreshold="3" MapSize="100">
+            <!--0: NDT -->
+            <LOFrontEnd>
+                <Mather MatchType="0" MatchThreshold="0.4">
+                    <NDT MaxIter="30" StepSize="0.1" Resolution="1.0" TransEps="0.01" />
+                </Mather>
+            </LOFrontEnd>
+            <LIOFrontEnd LineFilterSize="4" PlaneThreshold="0.15" LidarNoise="0.001" />
+        </FrontEnd>
+        <BackEnd>
+            <LOFactor AddDistThreshold="1.0" AddTimeThreshold="1.0" NoisePos="0.5 " NoiseAtt="0.001" />
+            <LCFactor NoisePos="0.3 " NoiseAtt="0.001" />
+            <GnssFactor AddDistThreshold="20.0" AddTimeThreshold="40.0" NoiseXY="1.0" NoiseZ="5.0" TrajErrThreshold="0.05" />
+        </BackEnd>
+        <LoopClose FrameDist="20" GlobalMatchThreshold="0.35">
+            <Mather MatchType="0" MatchThreshold="0.3">
+                <NDT MaxIter="50" StepSize="0.5" Resolution="0.5" TransEps="0.0001" />
+            </Mather>
+        </LoopClose>
+    </Mapping>
+
+    <VehicleLoc enable="false">
+        <Reloc>
+            <CoarseReloc enableRelocStation="true" enableRecord="true" enableGnss="true">
+                <LidarTopicList>
+                    <LidarTopic name="/MainLidar/car_filtered_points" />
+                </LidarTopicList>
+            </CoarseReloc>
+            <FineReloc>
+                <SearchStep StepX="0.5" StepY="0.5" StepZ="0.5" StepYaw="0.1" />
+                <VoxelMatch srcCloudRes="0.5" voxelMapRes="0.5" minScore="0.35" maxSearchPointNum="5" />
+                <Registerer type="0" minScore="0.6" srcCloudRes="1.0">
+                    <OmpNdt resolution="1.0" stepSize="1.0" transEps="0.01" maxIter="50" threadNum="1" />
+                </Registerer>
+            </FineReloc>
+        </Reloc>
+        <CombLoc>
+            <GnssLoc type="0">
+                <General isDualAntenna="false">
+                    <Eskf ng="0.001" na="0.1" nbg="0.0001" nba="0.01" />
+                </General>
+            </GnssLoc>
+            <LidarLoc type="0">
+                <LidarLocLio correctPeriod = "0.001">
+                    <Lio>
+                        <LidarTopicList>
+                            <LidarTopic name="/MainLidar/car_filtered_points" />
+                        </LidarTopicList>
+                    </Lio>
+                    <Registerer type="0" minScore="0.7" srcCloudRes="2.0">
+                        <OmpNdt resolution="1.0" stepSize="1.0" transEps="0.01" maxIter="50" threadNum="1" />
+                        <MixNdt rawResolution="1.0" fineResolution="0.5" stepSize="0.1" transEps="0.01" outlierThr="20.0" maxIter="20" threadNum="1" srcCloudDsRes="2.0" />
+                    </Registerer>
+                    <Smoother windowSize="5" weight="0.8" />
+                </LidarLocLio>
+                <LidarLocWio correctPeriod = "0.001">
+                    <LidarTopicList>
+                        <LidarTopic name="/MainLidar/car_filtered_points" />
+                    </LidarTopicList>
+                    <Registerer type="0" minScore="0.7" srcCloudRes="2.0">
+                        <OmpNdt resolution="1.0" stepSize="1.0" transEps="0.01" maxIter="50" threadNum="1" />
+                        <MixNdt rawResolution="1.0" fineResolution="0.5" stepSize="0.1" transEps="0.01" outlierThr="20.0" maxIter="20" threadNum="1" srcCloudDsRes="2.0" />
+                    </Registerer>
+                    <Smoother windowSize="5" weight="0.8" />
+                </LidarLocWio>
+            </LidarLoc>
+        </CombLoc>
+    </VehicleLoc>
+</CfgParam>

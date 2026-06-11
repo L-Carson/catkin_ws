@@ -1,0 +1,3 @@
+sensorExtriParam gnss
+sensorExtriParam imu
+sensorExtriParam lidar

@@ -1,0 +1,8 @@
+prefix=/home/saite/ly/3d_detection/catkin_ws/install
+
+Name: lidar_det_interface
+Description: Description of lidar_det_interface
+Version: 0.0.1
+Cflags: -I${prefix}/include
+Libs: -L${prefix}/lib 
+Requires: 

@@ -1,0 +1,6 @@
+float32 plannedSteeringAngle
+float32 plannedMoveLinearVel
+float32 controlSteeringAngle
+float32 controlMoveLinearVel
+float32 measureSteeringAngle
+float32 measureMoveLinearVel

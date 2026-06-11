@@ -1,0 +1,14 @@
+int32   mode
+int32   state
+int32   frontEndMethod
+float32 currFrameLeafSize
+float32 localMapLeafSize  
+int32   localMapWindowSize 
+float32 loopDetectDist 
+string  cfgDir
+string  dstDir
+string  bagPath
+string  srcDir
+---
+bool   success
+string message

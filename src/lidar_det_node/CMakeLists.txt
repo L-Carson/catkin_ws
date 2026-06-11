@@ -16,13 +16,14 @@ find_package(catkin REQUIRED COMPONENTS
   visualization_msgs
   pcl_ros
   pcl_conversions
+  comm
   comm_msg
   lidar_det_interface
 )
 find_package(PCL REQUIRED)
 
 catkin_package(
-  CATKIN_DEPENDS roscpp sensor_msgs comm_msg visualization_msgs lidar_det_interface
+  CATKIN_DEPENDS roscpp sensor_msgs comm comm_msg visualization_msgs lidar_det_interface
 )
 
 # ---------------------------------------------------------------------------

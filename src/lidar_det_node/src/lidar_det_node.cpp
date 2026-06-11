@@ -9,6 +9,7 @@
 // and is identical on x86 and Orin.
 
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <map>
 #include <memory>
@@ -28,6 +29,8 @@
 
 #include <comm_msg/box.h>
 #include <comm_msg/boxArray.h>
+
+#include "comm/comm_dbg_log.h"
 
 #include "lidar_det_interface/lidar_detector_api.hpp"
 
@@ -123,11 +126,11 @@ void resolveDetectorModelPaths(lidar_det::DetectorConfig& cfg) {
     cfg.bev_engine  = joinModelPath(cfg.model_dir, cfg.bev_engine);
     cfg.head_engine = joinModelPath(cfg.model_dir, cfg.head_engine);
 
-    ROS_INFO("model_dir=%s", cfg.model_dir.c_str());
-    ROS_INFO("scn_onnx=%s", cfg.scn_onnx.c_str());
-    ROS_INFO("bev_weights=%s", cfg.bev_weights.c_str());
-    ROS_INFO("bev_engine=%s", cfg.bev_engine.c_str());
-    ROS_INFO("head_engine=%s", cfg.head_engine.c_str());
+    ST_LOG_INFO("model_dir=%s", cfg.model_dir.c_str());
+    ST_LOG_INFO("scn_onnx=%s", cfg.scn_onnx.c_str());
+    ST_LOG_INFO("bev_weights=%s", cfg.bev_weights.c_str());
+    ST_LOG_INFO("bev_engine=%s", cfg.bev_engine.c_str());
+    ST_LOG_INFO("head_engine=%s", cfg.head_engine.c_str());
 }
 
 }  // namespace
@@ -160,12 +163,12 @@ public:
         // --- backend ------------------------------------------------------
         detector_ = lidar_det::CreateLidarDetector(cfg);
         if (!detector_) {
-            ROS_ERROR("CreateLidarDetector returned null for backend '%s'", cfg.backend.c_str());
+            ST_LOG_ERR("CreateLidarDetector returned null for backend '%s'.", cfg.backend.c_str());
         } else if (detector_->prepare() != 0) {
-            ROS_ERROR("Detector prepare() failed; node will spin but produce no detections.");
+            ST_LOG_ERR("Detector prepare() failed; node will spin but produce no detections.");
             detector_.reset();
         } else {
-            ROS_INFO("Detector backend '%s' ready.", cfg.backend.c_str());
+            ST_LOG_INFO("Detector backend '%s' ready.", cfg.backend.c_str());
         }
         feature_num_ = cfg.feature_num;
 
@@ -173,7 +176,7 @@ public:
         pub_box_    = nh_.advertise<comm_msg::boxArray>(output_topic_, 1, true);
         pub_marker_ = nh_.advertise<visualization_msgs::MarkerArray>(marker_topic_, 1, true);
         sub_cloud_  = nh_.subscribe(input_topic_, 1, &LidarDetAdapter::cloudCb, this);
-        ROS_INFO("lidar_det_node: sub '%s' -> pub '%s'", input_topic_.c_str(), output_topic_.c_str());
+        ST_LOG_INFO("lidar_det_node: sub '%s' -> pub '%s'.", input_topic_.c_str(), output_topic_.c_str());
     }
 
 private:
@@ -185,10 +188,10 @@ private:
                 try {
                     class_map_[std::stoi(kv.first)] = kv.second;
                 } catch (const std::exception&) {
-                    ROS_WARN("Ignoring non-integer class_map key '%s'", kv.first.c_str());
+                    ST_LOG_WARN("Ignoring non-integer class_map key '%s'.", kv.first.c_str());
                 }
             }
-            ROS_INFO("class_map overridden with %zu entries.", override_map.size());
+            ST_LOG_INFO("class_map overridden with %zu entries.", override_map.size());
         }
     }
 
@@ -292,6 +295,23 @@ int main(int argc, char** argv) {
     ros::init(argc, argv, "lidar_det_node");
     ros::NodeHandle nh;
     ros::NodeHandle pnh("~");
+
+    // ~log_file: "" => stdout; "~/..." expands to $HOME. ST_LOG_* only -- the
+    // backend .so keeps printing to stdout regardless.
+    std::string log_file;
+    pnh.param<std::string>("log_file", log_file, std::string());
+    if (!log_file.empty()) {
+        if (log_file[0] == '~') {
+            const char* home = std::getenv("HOME");
+            if (home != nullptr) log_file = std::string(home) + log_file.substr(1);
+        }
+        std::error_code ec;
+        fs::create_directories(fs::path(log_file).parent_path(), ec);
+        (void)InitXXXLog(log_file);  // on failure it logs to stdout and we keep stdout
+    }
+    ST_LOG_INFO("lidar_det_node start. log_file=%s.",
+                log_file.empty() ? "<stdout>" : log_file.c_str());
+
     LidarDetAdapter adapter(nh, pnh);
     ros::spin();
     return 0;

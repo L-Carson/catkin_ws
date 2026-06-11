@@ -1,5 +1,8 @@
 # lidar_det_node 跨 Orin Nano 部署说明
 
+> **推荐（无源码上车）**：见 [DEPLOY_RUNTIME.md](DEPLOY_RUNTIME.md) — 打包
+> `dist/lidar_det_runtime_*.tar.gz`，目标机解压即用，**不需要 `src/` 与 `catkin_make`**。
+
 目标：在**其他 Orin Nano**上直接启动 `lidar_det_node`，无需重编译重型后端
 （`libtransfusion_backend.so`），也无需 TransFusion 源码树。
 
@@ -34,7 +37,7 @@ rsync -a catkin_ws/ saite@<orin-ip>:/home/saite/ly/3d_detection/catkin_ws/
 
 # 2) 在目标机编译（只编译这 3 个轻量包，秒级；不会重编 .so）
 cd ~/ly/3d_detection/catkin_ws
-catkin_make -DCATKIN_WHITELIST_PACKAGES="comm_msg;lidar_det_interface;lidar_det_node"
+catkin_make -DCATKIN_WHITELIST_PACKAGES="comm_msg;comm_srvs;core_lib;comm;lidar_det_interface;lidar_det_node"
 
 # 3) 运行
 source devel/setup.bash
@@ -86,6 +89,16 @@ readelf -d devel/lib/lidar_det_node/lidar_det_node | grep -iE "rpath|runpath"
 
 脚本会依次 `source` navZero 与 `~/ly/3d_detection/catkin_ws/devel/setup.bash`，
 再执行 `roslaunch lidar_det_node lidar_det_node.launch`。
+
+节点自身日志走 comm 库的 `ST_LOG_*`（不受 navZero `rosconsole.config`
+屏蔽 `ROS_INFO` 的影响），由 `config/lidar_det.yaml` 的 `log_file` 指定输出：
+
+- 默认：`~/map_config/log/debug/processprint/lidar_det_node_st.log`
+- 设为 `""` 则输出到 stdout（被 roslaunch / wrapper 重定向捕获）
+
+`comm_msg` 仅来自 `src/comm/comm_msg/`（勿在 `src/` 再放副本）。
+目标机编译白名单需包含 `comm_msg;comm_srvs;core_lib;comm`（详见 `docs/BUILD.md`）
+（见上文部署步骤）。
 
 手动验证：
 
