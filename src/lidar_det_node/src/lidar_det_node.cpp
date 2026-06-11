@@ -13,9 +13,13 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
+#include <ctime>
 #include <filesystem>
+#include <fstream>
+#include <iomanip>
 #include <map>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -27,6 +31,7 @@
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
 
+#include <pcl/io/pcd_io.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -214,11 +219,195 @@ void bumpMappedLabelCount(uint8_t mapped, FrameMetrics& m) {
     ++m.mapped_counts[mapped];
 }
 
+std::string expandUserPath(const std::string& path) {
+    if (path.empty() || path[0] != '~') return path;
+    const char* home = std::getenv("HOME");
+    return (home != nullptr) ? (std::string(home) + path.substr(1)) : path;
+}
+
+struct StorageQuota {
+    int64_t max_total_bytes = 0;
+    size_t  max_files       = 0;
+};
+
+void pruneDirectoryFiles(const fs::path& dir,
+                         const std::string& name_prefix,
+                         const StorageQuota& quota) {
+    if ((quota.max_total_bytes <= 0 && quota.max_files == 0) || name_prefix.empty()) {
+        return;
+    }
+
+    std::error_code ec;
+    if (!fs::exists(dir, ec)) return;
+
+    struct FileEntry {
+        fs::path path;
+        fs::file_time_type mtime;
+        int64_t size = 0;
+    };
+    std::vector<FileEntry> files;
+
+    for (const auto& entry : fs::directory_iterator(dir, ec)) {
+        if (ec || !entry.is_regular_file(ec)) continue;
+        const std::string name = entry.path().filename().string();
+        if (name.compare(0, name_prefix.size(), name_prefix) != 0) continue;
+        FileEntry fe;
+        fe.path  = entry.path();
+        fe.mtime = entry.last_write_time(ec);
+        fe.size  = static_cast<int64_t>(fs::file_size(fe.path, ec));
+        files.push_back(fe);
+    }
+
+    auto totalBytes = [&files]() {
+        int64_t sum = 0;
+        for (const auto& f : files) sum += f.size;
+        return sum;
+    };
+
+    std::sort(files.begin(), files.end(),
+              [](const FileEntry& a, const FileEntry& b) { return a.mtime < b.mtime; });
+
+    while (!files.empty()) {
+        const bool too_many =
+            quota.max_files > 0 && files.size() > quota.max_files;
+        const bool too_large =
+            quota.max_total_bytes > 0 && totalBytes() > quota.max_total_bytes;
+        if (!too_many && !too_large) break;
+
+        std::error_code rm_ec;
+        fs::remove(files.front().path, rm_ec);
+        files.erase(files.begin());
+    }
+}
+
+void rotateStLogFile(const std::string& log_path, int64_t max_single_bytes) {
+    if (max_single_bytes <= 0 || pLogFileHandle == nullptr || log_path.empty()) return;
+
+    g_objLogMutex.lock();
+    fflush(pLogFileHandle);
+    const long cur_size = ftell(pLogFileHandle);
+    g_objLogMutex.unlock();
+    if (cur_size < max_single_bytes) return;
+
+    g_objLogMutex.lock();
+    if (pLogFileHandle != nullptr) {
+        fclose(pLogFileHandle);
+        pLogFileHandle = nullptr;
+    }
+    g_objLogMutex.unlock();
+
+    constexpr int kMaxRotated = 4;
+    for (int i = kMaxRotated; i >= 1; --i) {
+        const fs::path dst = log_path + "." + std::to_string(i);
+        std::error_code ec;
+        if (fs::exists(dst, ec)) fs::remove(dst, ec);
+        if (i == 1) {
+            if (fs::exists(log_path, ec)) fs::rename(log_path, dst, ec);
+        } else {
+            const fs::path src = log_path + "." + std::to_string(i - 1);
+            if (fs::exists(src, ec)) fs::rename(src, dst, ec);
+        }
+    }
+
+    g_objLogMutex.lock();
+    pLogFileHandle = fopen(log_path.c_str(), "w");
+    g_objLogMutex.unlock();
+
+    if (pLogFileHandle != nullptr) {
+        ST_LOG_INFO("log rotated: %s exceeded %lld bytes.",
+                  log_path.c_str(), static_cast<long long>(max_single_bytes));
+    } else {
+        ST_LOG_ERR("log rotate failed: cannot reopen %s.", log_path.c_str());
+    }
+}
+
+class AbnormalCloudSaver {
+public:
+    void configure(ros::NodeHandle& pnh) {
+        pnh.param("save_abnormal_cloud", enabled_, false);
+        pnh.param<std::string>("abnormal_cloud_dir", dir_,
+                                 std::string("~/map_config/log/debug/lidar_det_abnormal"));
+        int max_total_mb = 512;
+        int max_files = 500;
+        pnh.param("abnormal_cloud_max_total_mb", max_total_mb, 512);
+        pnh.param("abnormal_cloud_max_files", max_files, 500);
+        pnh.param("abnormal_cloud_min_interval_sec", min_interval_sec_, 2.0);
+
+        dir_ = expandUserPath(dir_);
+        quota_.max_total_bytes =
+            max_total_mb > 0 ? static_cast<int64_t>(max_total_mb) * 1024 * 1024 : 0;
+        quota_.max_files = max_files > 0 ? static_cast<size_t>(max_files) : 0;
+
+        if (!enabled_) return;
+
+        std::error_code ec;
+        fs::create_directories(fs::path(dir_), ec);
+        pruneDirectoryFiles(fs::path(dir_), "abnormal_", quota_);
+        ST_LOG_INFO("abnormal cloud save enabled: dir=%s max_total_mb=%d max_files=%d "
+                    "min_interval_sec=%.1f",
+                    dir_.c_str(), max_total_mb, max_files, min_interval_sec_);
+    }
+
+    void trySave(const std::string& reason,
+                 const sensor_msgs::PointCloud2ConstPtr& msg,
+                 const pcl::PointCloud<pcl::PointXYZI>& cloud,
+                 uint64_t frame_count,
+                 const FrameMetrics& metrics) {
+        if (!enabled_ || reason.empty() || !msg) return;
+
+        const ros::Time now = ros::Time::now();
+        const auto it = last_save_.find(reason);
+        if (it != last_save_.end() &&
+            (now - it->second).toSec() < min_interval_sec_) {
+            return;
+        }
+
+        pruneDirectoryFiles(fs::path(dir_), "abnormal_", quota_);
+
+        std::ostringstream base;
+        base << "abnormal_" << reason << "_f" << frame_count << "_"
+             << std::fixed << std::setprecision(3) << msg->header.stamp.toSec();
+        const std::string pcd_path = (fs::path(dir_) / (base.str() + ".pcd")).string();
+        const std::string txt_path = (fs::path(dir_) / (base.str() + ".txt")).string();
+
+        if (pcl::io::savePCDFileBinary(pcd_path, cloud) != 0) {
+            ST_LOG_WARN("abnormal cloud save failed: %s", pcd_path.c_str());
+            return;
+        }
+
+        std::ofstream meta(txt_path);
+        if (meta) {
+            meta << "reason=" << reason << "\n"
+                 << "frame=" << frame_count << "\n"
+                 << "stamp=" << msg->header.stamp.toSec() << "\n"
+                 << "frame_id=" << msg->header.frame_id << "\n"
+                 << "pts=" << metrics.pts_in << "\n"
+                 << "raw_det=" << metrics.raw_det << "\n"
+                 << "kept=" << metrics.kept << "\n"
+                 << "best_score=" << metrics.best_score << "\n"
+                 << "infer_ms=" << metrics.infer_ms << "\n";
+        }
+
+        last_save_[reason] = now;
+        ST_LOG_WARN("abnormal cloud saved: reason=%s pts=%zu file=%s",
+                    reason.c_str(), cloud.size(), pcd_path.c_str());
+    }
+
+private:
+    bool         enabled_ = false;
+    std::string  dir_;
+    StorageQuota quota_;
+    double       min_interval_sec_ = 2.0;
+    std::map<std::string, ros::Time> last_save_;
+};
+
 }  // namespace
 
 class LidarDetAdapter {
 public:
-    explicit LidarDetAdapter(ros::NodeHandle& nh, ros::NodeHandle& pnh) : nh_(nh) {
+    explicit LidarDetAdapter(ros::NodeHandle& nh, ros::NodeHandle& pnh,
+                             const std::string& log_file_path)
+        : nh_(nh), log_file_path_(log_file_path) {
         pnh.param<std::string>("input_topic",  input_topic_,  "/MainLidar/car_filtered_points");
         pnh.param<std::string>("output_topic", output_topic_, "/pcpt_net/box");
         pnh.param<std::string>("marker_topic", marker_topic_, "/detect_box_markers");
@@ -231,9 +420,13 @@ public:
         pnh.param("summary_interval",  summary_interval_,  60);
         pnh.param("input_timeout_sec", input_timeout_sec_, 1.0);
         pnh.param<std::string>("health_topic", health_topic_, "/lidar_det/health");
+        pnh.param("log_max_total_mb", log_max_total_mb_, 100);
+        pnh.param("log_rotate_single_mb", log_rotate_single_mb_, 20);
 
         if (stats_interval_ < 1)   stats_interval_   = 1;
         if (summary_interval_ < 1) summary_interval_ = 1;
+
+        abnormal_saver_.configure(pnh);
 
         lidar_det::DetectorConfig cfg;
         pnh.param<std::string>("backend",     cfg.backend,     "transfusion");
@@ -276,6 +469,12 @@ public:
                 &LidarDetAdapter::stallCheckCb, this);
         }
 
+        if (!log_file_path_.empty() &&
+            (log_max_total_mb_ > 0 || log_rotate_single_mb_ > 0)) {
+            log_maint_timer_ = nh_.createTimer(
+                ros::Duration(30.0), &LidarDetAdapter::logMaintainCb, this);
+        }
+
         ST_LOG_INFO("lidar_det_node: sub '%s' -> pub '%s' marker '%s'.",
                     input_topic_.c_str(), output_topic_.c_str(), marker_topic_.c_str());
         if (verbose_) {
@@ -298,6 +497,45 @@ private:
                     input_topic_.c_str(), output_topic_.c_str(), marker_topic_.c_str(),
                     frame_id_.empty() ? "<from cloud>" : frame_id_.c_str(),
                     health_topic_.empty() ? "<disabled>" : health_topic_.c_str());
+        ST_LOG_INFO("log quota: max_total_mb=%d rotate_single_mb=%d file=%s",
+                    log_max_total_mb_, log_rotate_single_mb_,
+                    log_file_path_.empty() ? "<stdout>" : log_file_path_.c_str());
+    }
+
+    void logMaintainCb(const ros::TimerEvent&) {
+        if (log_file_path_.empty()) return;
+
+        if (log_rotate_single_mb_ > 0) {
+            rotateStLogFile(
+                log_file_path_,
+                static_cast<int64_t>(log_rotate_single_mb_) * 1024 * 1024);
+        }
+        if (log_max_total_mb_ > 0) {
+            StorageQuota quota;
+            quota.max_total_bytes =
+                static_cast<int64_t>(log_max_total_mb_) * 1024 * 1024;
+            pruneDirectoryFiles(fs::path(log_file_path_).parent_path(),
+                                "lidar_det_node_st", quota);
+        }
+    }
+
+    void saveAbnormalCloudIfNeeded(const sensor_msgs::PointCloud2ConstPtr& msg,
+                                   const pcl::PointCloud<pcl::PointXYZI>& cloud,
+                                   const FrameMetrics& m) {
+        if (!detector_) {
+            abnormal_saver_.trySave("detector_down", msg, cloud, frame_count_, m);
+        }
+        if (m.pts_in == 0) {
+            abnormal_saver_.trySave("empty_cloud", msg, cloud, frame_count_, m);
+            return;
+        }
+        if (!detector_) return;
+        if (m.raw_det == 0) {
+            abnormal_saver_.trySave("zero_raw_det", msg, cloud, frame_count_, m);
+        }
+        if (m.raw_det > 0 && m.kept == 0) {
+            abnormal_saver_.trySave("all_filtered", msg, cloud, frame_count_, m);
+        }
     }
 
     void loadClassMap(ros::NodeHandle& pnh) {
@@ -430,6 +668,7 @@ private:
         }
 
         logFrameMetrics(m, out_frame);
+        saveAbnormalCloudIfNeeded(msg, cloud, m);
 
         pub_box_.publish(arr);
         publishMarkers(arr.boxes, out_frame, msg->header.stamp);
@@ -546,6 +785,12 @@ private:
     ros::Publisher  pub_marker_;
     ros::Publisher  pub_health_;
     ros::Timer      stall_timer_;
+    ros::Timer      log_maint_timer_;
+
+    AbnormalCloudSaver abnormal_saver_;
+    std::string log_file_path_;
+    int         log_max_total_mb_    = 100;
+    int         log_rotate_single_mb_ = 20;
 
     std::unique_ptr<lidar_det::ILidarDetector> detector_;
     std::unordered_map<int, int>               class_map_;
@@ -572,11 +817,18 @@ int main(int argc, char** argv) {
 
     std::string log_file;
     pnh.param<std::string>("log_file", log_file, std::string());
+    log_file = expandUserPath(log_file);
+
+    int log_max_total_mb = 100;
+    pnh.param("log_max_total_mb", log_max_total_mb, 100);
+    if (!log_file.empty() && log_max_total_mb > 0) {
+        StorageQuota quota;
+        quota.max_total_bytes = static_cast<int64_t>(log_max_total_mb) * 1024 * 1024;
+        pruneDirectoryFiles(fs::path(log_file).parent_path(),
+                            "lidar_det_node_st", quota);
+    }
+
     if (!log_file.empty()) {
-        if (log_file[0] == '~') {
-            const char* home = std::getenv("HOME");
-            if (home != nullptr) log_file = std::string(home) + log_file.substr(1);
-        }
         std::error_code ec;
         fs::create_directories(fs::path(log_file).parent_path(), ec);
         (void)InitXXXLog(log_file);
@@ -584,7 +836,7 @@ int main(int argc, char** argv) {
     ST_LOG_INFO("lidar_det_node start. log_file=%s.",
                 log_file.empty() ? "<stdout>" : log_file.c_str());
 
-    LidarDetAdapter adapter(nh, pnh);
+    LidarDetAdapter adapter(nh, pnh, log_file);
     ros::spin();
     return 0;
 }
