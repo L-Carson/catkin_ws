@@ -1,0 +1,2 @@
+set(comm_srvs_MESSAGE_FILES "msg/LidarInstallParam.msg;msg/sensorInstallParam.msg;msg/cameraParam.msg;msg/visionFuncCfg.msg;msg/visionLabelCfg.msg")
+set(comm_srvs_SERVICE_FILES "srv/MappingStart.srv;srv/PcdNet.srv;srv/InitPose.srv;srv/VelocityLevel.srv;srv/camerasParam.srv;srv/visionFunc.srv;srv/visionFuncSim.srv;srv/cameraCalibration.srv;srv/lidarCalibration.srv;srv/imuCalibration.srv;srv/lidarOffsetCalibration.srv;srv/imuOffsetCalibration.srv")

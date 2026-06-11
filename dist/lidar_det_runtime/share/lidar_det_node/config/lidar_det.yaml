@@ -1,0 +1,35 @@
+# lidar_det_node parameters (loaded into the node's private namespace).
+backend: transfusion
+
+# Model assets (relative to model_dir).
+# model_dir empty => auto-detect: vendor/model -> share/lidar_det_node/model
+#                                 -> 3d_target_detection/.../TransFusion/model
+# File names empty => use the defaults below. Engines are per-platform/TRT-version.
+model_dir: ""
+scn_onnx:    "transfusion_fast30.scn.onnx"
+bev_weights: "sparse_backbone_weights_fast30.bin"
+bev_engine:  "transfusion_bev_fast30_h100.engine"
+head_engine: "transfusion_head_fast30_fp16.engine"
+
+feature_num: 5
+verbose: false
+
+# ST_LOG output file. "" => stdout (captured by roslaunch / wrapper redirect).
+# Leading "~" expands to $HOME. Separate from the navZero wrapper's stdout log
+# (lidar_det_node.log) to avoid two writers on one file.
+log_file: "~/map_config/log/debug/processprint/lidar_det_node_st.log"
+
+# ROS I/O (kept compatible with the original pcpt_net_node contract).
+input_topic:  "/MainLidar/trans_points"
+output_topic: "/trans_net/box"
+marker_topic: "/detect_box_markers"
+frame_id:     ""          # empty => reuse incoming cloud header.frame_id
+lidar_height: 1.68
+score_threshold: 0.1
+
+# nuScenes class id (string key) -> comm_msg/label.msg value. Overrides the
+# built-in default map; only listed ids are changed.
+class_map:
+  "0": 4    # car        -> CAR
+  "7": 3    # bicycle    -> BICYCLE
+  "8": 1    # pedestrian -> PEDESTRIAN

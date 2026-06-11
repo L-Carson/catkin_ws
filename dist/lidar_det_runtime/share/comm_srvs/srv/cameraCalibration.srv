@@ -1,0 +1,11 @@
+string  camera_name             #相机名称
+string  camera_matrix           #相机内参
+string  distortion_coefficients #畸变系数
+float32 tx
+float32 ty
+float32 tz
+float32 roll
+float32 pitch
+float32 yaw
+---
+bool    success

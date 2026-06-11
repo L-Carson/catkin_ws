@@ -1,0 +1,8 @@
+prefix=/home/saite/ly/3d_detection/catkin_ws/install
+
+Name: lidar_det_node
+Description: Description of lidar_det_node
+Version: 0.0.1
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: roscpp sensor_msgs comm comm_msg visualization_msgs lidar_det_interface

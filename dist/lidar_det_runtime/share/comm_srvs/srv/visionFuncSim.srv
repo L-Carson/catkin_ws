@@ -1,0 +1,7 @@
+uint8       qrCodeId
+uint8       funcId
+bool        isUseIpu
+uint8       hz
+string      camera
+---
+bool        success

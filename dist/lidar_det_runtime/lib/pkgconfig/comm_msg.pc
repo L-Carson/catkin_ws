@@ -1,0 +1,8 @@
+prefix=/home/saite/ly/3d_detection/catkin_ws/install
+
+Name: comm_msg
+Description: Description of comm_msg
+Version: 0.0.0
+Cflags: -I${prefix}/include
+Libs: -L${prefix}/lib 
+Requires: message_runtime std_msgs

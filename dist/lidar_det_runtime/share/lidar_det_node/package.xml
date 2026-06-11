@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>lidar_det_node</name>
+  <version>0.0.1</version>
+  <description>
+    Thin ROS adapter: subscribes a PointCloud2, runs a pluggable ILidarDetector
+    backend (e.g. TransFusion), and publishes comm_msg/boxArray + RViz markers.
+    Keeps the original I/O contract; the model backend lives in an external .so.
+  </description>
+  <maintainer email="saite@saite.com">saite</maintainer>
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>roscpp</depend>
+  <depend>roslib</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>visualization_msgs</depend>
+  <depend>pcl_ros</depend>
+  <depend>pcl_conversions</depend>
+  <depend>comm</depend>
+  <depend>comm_msg</depend>
+  <depend>lidar_det_interface</depend>
+</package>

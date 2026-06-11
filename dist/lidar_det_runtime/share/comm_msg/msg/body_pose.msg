@@ -1,0 +1,7 @@
+float32 body_yaw
+float32 backWheel_x
+float32 backWheel_y
+float32 frontWheel_x
+float32 frontWheel_y
+float32 alongEdgeRefPoint_x
+float32 alongEdgeRefPoint_y

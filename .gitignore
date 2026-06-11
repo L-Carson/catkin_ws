@@ -1,6 +1,6 @@
 build/
 devel/
-dist/
+#dist/
 .catkin_workspace
 *.pyc
 __pycache__/

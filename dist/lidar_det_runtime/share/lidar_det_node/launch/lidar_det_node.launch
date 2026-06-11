@@ -1,0 +1,11 @@
+<launch>
+  <arg name="config" default="$(find lidar_det_node)/config/lidar_det.yaml"/>
+  <!-- Empty => node auto-detects vendored models (vendor/model or share/model).
+       Override with an absolute/relative path only for custom model locations. -->
+  <arg name="model_dir" default=""/>
+
+  <node pkg="lidar_det_node" type="lidar_det_node" name="lidar_det_node" output="screen">
+    <rosparam command="load" file="$(arg config)"/>
+    <param name="model_dir" value="$(arg model_dir)"/>
+  </node>
+</launch>

@@ -1,0 +1,4 @@
+sensorInstallParam imuClbtParam
+---
+bool        success
+
