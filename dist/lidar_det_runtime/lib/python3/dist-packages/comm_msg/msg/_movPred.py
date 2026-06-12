@@ -9,7 +9,7 @@ import struct
 import comm_msg.msg
 
 class movPred(genpy.Message):
-  _md5sum = "f24e6d2870e7907336df86d90f0381cc"
+  _md5sum = "76372f1cf63bb189fc9bb9cd43dbfca9"
   _type = "comm_msg/movPred"
   _has_header = False  # flag to mark the presence of a Header object
   _full_text = """float64 timeStamp
@@ -28,7 +28,7 @@ float32 yaw     #rotated by z, radian(not a angle)
 float32 vel_x   #m/s
 float32 vel_y   #m/s
 float32 vel_z   #m/s
-float32 score   #detection confidence [0,1]
+#float32 score   #detection confidence [0,1]
 ================================================================================
 MSG: comm_msg/label
 #Note: 枚举类别、枚举值、枚举顺序均不可随意改动，不然md5不匹配，消息将无法正常解析
@@ -133,7 +133,7 @@ uint8 value"""
     """
     try:
       _x = self
-      buff.write(_get_struct_dB11f().pack(_x.timeStamp, _x.box.label.value, _x.box.x, _x.box.y, _x.box.z, _x.box.width, _x.box.length, _x.box.height, _x.box.yaw, _x.box.vel_x, _x.box.vel_y, _x.box.vel_z, _x.box.score))
+      buff.write(_get_struct_dB10f().pack(_x.timeStamp, _x.box.label.value, _x.box.x, _x.box.y, _x.box.z, _x.box.width, _x.box.length, _x.box.height, _x.box.yaw, _x.box.vel_x, _x.box.vel_y, _x.box.vel_z))
     except struct.error as se: self._check_types(struct.error("%s: '%s' when writing '%s'" % (type(se), str(se), str(locals().get('_x', self)))))
     except TypeError as te: self._check_types(ValueError("%s: '%s' when writing '%s'" % (type(te), str(te), str(locals().get('_x', self)))))
 
@@ -150,8 +150,8 @@ uint8 value"""
       end = 0
       _x = self
       start = end
-      end += 53
-      (_x.timeStamp, _x.box.label.value, _x.box.x, _x.box.y, _x.box.z, _x.box.width, _x.box.length, _x.box.height, _x.box.yaw, _x.box.vel_x, _x.box.vel_y, _x.box.vel_z, _x.box.score,) = _get_struct_dB11f().unpack(str[start:end])
+      end += 49
+      (_x.timeStamp, _x.box.label.value, _x.box.x, _x.box.y, _x.box.z, _x.box.width, _x.box.length, _x.box.height, _x.box.yaw, _x.box.vel_x, _x.box.vel_y, _x.box.vel_z,) = _get_struct_dB10f().unpack(str[start:end])
       return self
     except struct.error as e:
       raise genpy.DeserializationError(e)  # most likely buffer underfill
@@ -165,7 +165,7 @@ uint8 value"""
     """
     try:
       _x = self
-      buff.write(_get_struct_dB11f().pack(_x.timeStamp, _x.box.label.value, _x.box.x, _x.box.y, _x.box.z, _x.box.width, _x.box.length, _x.box.height, _x.box.yaw, _x.box.vel_x, _x.box.vel_y, _x.box.vel_z, _x.box.score))
+      buff.write(_get_struct_dB10f().pack(_x.timeStamp, _x.box.label.value, _x.box.x, _x.box.y, _x.box.z, _x.box.width, _x.box.length, _x.box.height, _x.box.yaw, _x.box.vel_x, _x.box.vel_y, _x.box.vel_z))
     except struct.error as se: self._check_types(struct.error("%s: '%s' when writing '%s'" % (type(se), str(se), str(locals().get('_x', self)))))
     except TypeError as te: self._check_types(ValueError("%s: '%s' when writing '%s'" % (type(te), str(te), str(locals().get('_x', self)))))
 
@@ -183,8 +183,8 @@ uint8 value"""
       end = 0
       _x = self
       start = end
-      end += 53
-      (_x.timeStamp, _x.box.label.value, _x.box.x, _x.box.y, _x.box.z, _x.box.width, _x.box.length, _x.box.height, _x.box.yaw, _x.box.vel_x, _x.box.vel_y, _x.box.vel_z, _x.box.score,) = _get_struct_dB11f().unpack(str[start:end])
+      end += 49
+      (_x.timeStamp, _x.box.label.value, _x.box.x, _x.box.y, _x.box.z, _x.box.width, _x.box.length, _x.box.height, _x.box.yaw, _x.box.vel_x, _x.box.vel_y, _x.box.vel_z,) = _get_struct_dB10f().unpack(str[start:end])
       return self
     except struct.error as e:
       raise genpy.DeserializationError(e)  # most likely buffer underfill
@@ -193,9 +193,9 @@ _struct_I = genpy.struct_I
 def _get_struct_I():
     global _struct_I
     return _struct_I
-_struct_dB11f = None
-def _get_struct_dB11f():
-    global _struct_dB11f
-    if _struct_dB11f is None:
-        _struct_dB11f = struct.Struct("<dB11f")
-    return _struct_dB11f
+_struct_dB10f = None
+def _get_struct_dB10f():
+    global _struct_dB10f
+    if _struct_dB10f is None:
+        _struct_dB10f = struct.Struct("<dB10f")
+    return _struct_dB10f

@@ -639,7 +639,7 @@ private:
                 b.width = d.w;  b.length = d.l;  b.height = d.h;
                 b.yaw = d.yaw;
                 b.vel_x = d.vx;  b.vel_y = d.vy;  b.vel_z = 0.f;
-                b.score = d.score;
+                //b.score = d.score;
                 arr.boxes.push_back(b);
                 bumpMappedLabelCount(mapped, m);
 

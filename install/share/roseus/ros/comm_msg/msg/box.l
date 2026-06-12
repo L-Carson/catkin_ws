@@ -14,7 +14,7 @@
 
 (defclass comm_msg::box
   :super ros::object
-  :slots (_label _x _y _z _width _length _height _yaw _vel_x _vel_y _vel_z _score ))
+  :slots (_label _x _y _z _width _length _height _yaw _vel_x _vel_y _vel_z ))
 
 (defmethod comm_msg::box
   (:init
@@ -30,7 +30,6 @@
     ((:vel_x __vel_x) 0.0)
     ((:vel_y __vel_y) 0.0)
     ((:vel_z __vel_z) 0.0)
-    ((:score __score) 0.0)
     )
    (send-super :init)
    (setq _label __label)
@@ -44,7 +43,6 @@
    (setq _vel_x (float __vel_x))
    (setq _vel_y (float __vel_y))
    (setq _vel_z (float __vel_z))
-   (setq _score (float __score))
    self)
   (:label
    (&rest __label)
@@ -83,9 +81,6 @@
   (:vel_z
    (&optional __vel_z)
    (if __vel_z (setq _vel_z __vel_z)) _vel_z)
-  (:score
-   (&optional __score)
-   (if __score (setq _score __score)) _score)
   (:serialization-length
    ()
    (+
@@ -110,8 +105,6 @@
     ;; float32 _vel_y
     4
     ;; float32 _vel_z
-    4
-    ;; float32 _score
     4
     ))
   (:serialize
@@ -140,8 +133,6 @@
        (sys::poke _vel_y (send s :buffer) (send s :count) :float) (incf (stream-count s) 4)
      ;; float32 _vel_z
        (sys::poke _vel_z (send s :buffer) (send s :count) :float) (incf (stream-count s) 4)
-     ;; float32 _score
-       (sys::poke _score (send s :buffer) (send s :count) :float) (incf (stream-count s) 4)
      ;;
      (if (null strm) (get-output-stream-string s))))
   (:deserialize
@@ -168,13 +159,11 @@
      (setq _vel_y (sys::peek buf ptr- :float)) (incf ptr- 4)
    ;; float32 _vel_z
      (setq _vel_z (sys::peek buf ptr- :float)) (incf ptr- 4)
-   ;; float32 _score
-     (setq _score (sys::peek buf ptr- :float)) (incf ptr- 4)
    ;;
    self)
   )
 
-(setf (get comm_msg::box :md5sum-) "618e70daa50994025209be81c63708e7")
+(setf (get comm_msg::box :md5sum-) "010e5d8fbb7da500e9e709e85fe17d1f")
 (setf (get comm_msg::box :datatype-) "comm_msg/box")
 (setf (get comm_msg::box :definition-)
       "label   label   #unknown car motor pede
@@ -188,7 +177,7 @@ float32 yaw     #rotated by z, radian(not a angle)
 float32 vel_x   #m/s
 float32 vel_y   #m/s
 float32 vel_z   #m/s
-float32 score   #detection confidence [0,1]
+#float32 score   #detection confidence [0,1]
 ================================================================================
 MSG: comm_msg/label
 #Note: 枚举类别、枚举值、枚举顺序均不可随意改动，不然md5不匹配，消息将无法正常解析
@@ -256,6 +245,6 @@ uint8 value
 
 
 
-(provide :comm_msg/box "618e70daa50994025209be81c63708e7")
+(provide :comm_msg/box "010e5d8fbb7da500e9e709e85fe17d1f")
 
 

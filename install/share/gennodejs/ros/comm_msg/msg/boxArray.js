@@ -71,7 +71,7 @@ class boxArray {
   static getMessageSize(object) {
     let length = 0;
     length += std_msgs.msg.Header.getMessageSize(object.header);
-    length += 45 * object.boxes.length;
+    length += 41 * object.boxes.length;
     return length + 4;
   }
 
@@ -82,7 +82,7 @@ class boxArray {
 
   static md5sum() {
     //Returns md5sum for a message object
-    return '7037e273e4b0070e45b7fdfbacadb006';
+    return 'c75b4d4a4c4616720356b181655ca74f';
   }
 
   static messageDefinition() {
@@ -120,7 +120,7 @@ class boxArray {
     float32 vel_x   #m/s
     float32 vel_y   #m/s
     float32 vel_z   #m/s
-    float32 score   #detection confidence [0,1]
+    #float32 score   #detection confidence [0,1]
     ================================================================================
     MSG: comm_msg/label
     #Note: 枚举类别、枚举值、枚举顺序均不可随意改动，不然md5不匹配，消息将无法正常解析

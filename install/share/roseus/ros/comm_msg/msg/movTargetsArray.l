@@ -78,7 +78,7 @@
    self)
   )
 
-(setf (get comm_msg::movTargetsArray :md5sum-) "53e285a8a0457018273219b388ef9a2c")
+(setf (get comm_msg::movTargetsArray :md5sum-) "b0324d7e29ce331fa6a17d56ed1c1412")
 (setf (get comm_msg::movTargetsArray :datatype-) "comm_msg/movTargetsArray")
 (setf (get comm_msg::movTargetsArray :definition-)
       "Header       header
@@ -121,7 +121,7 @@ float32 yaw     #rotated by z, radian(not a angle)
 float32 vel_x   #m/s
 float32 vel_y   #m/s
 float32 vel_z   #m/s
-float32 score   #detection confidence [0,1]
+#float32 score   #detection confidence [0,1]
 ================================================================================
 MSG: comm_msg/label
 #Note: 枚举类别、枚举值、枚举顺序均不可随意改动，不然md5不匹配，消息将无法正常解析
@@ -189,6 +189,6 @@ uint8 value
 
 
 
-(provide :comm_msg/movTargetsArray "53e285a8a0457018273219b388ef9a2c")
+(provide :comm_msg/movTargetsArray "b0324d7e29ce331fa6a17d56ed1c1412")
 
 

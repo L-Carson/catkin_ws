@@ -9,7 +9,7 @@ import struct
 import comm_msg.msg
 
 class box(genpy.Message):
-  _md5sum = "618e70daa50994025209be81c63708e7"
+  _md5sum = "010e5d8fbb7da500e9e709e85fe17d1f"
   _type = "comm_msg/box"
   _has_header = False  # flag to mark the presence of a Header object
   _full_text = """label   label   #unknown car motor pede
@@ -23,7 +23,7 @@ float32 yaw     #rotated by z, radian(not a angle)
 float32 vel_x   #m/s
 float32 vel_y   #m/s
 float32 vel_z   #m/s
-float32 score   #detection confidence [0,1]
+#float32 score   #detection confidence [0,1]
 ================================================================================
 MSG: comm_msg/label
 #Note: 枚举类别、枚举值、枚举顺序均不可随意改动，不然md5不匹配，消息将无法正常解析
@@ -87,8 +87,8 @@ uint8 CHARGING_GUN              = 60    #充电枪
 uint8 PLACEHOLDER               = 101    #占位符(MAX)
 
 uint8 value"""
-  __slots__ = ['label','x','y','z','width','length','height','yaw','vel_x','vel_y','vel_z','score']
-  _slot_types = ['comm_msg/label','float32','float32','float32','float32','float32','float32','float32','float32','float32','float32','float32']
+  __slots__ = ['label','x','y','z','width','length','height','yaw','vel_x','vel_y','vel_z']
+  _slot_types = ['comm_msg/label','float32','float32','float32','float32','float32','float32','float32','float32','float32','float32']
 
   def __init__(self, *args, **kwds):
     """
@@ -98,7 +98,7 @@ uint8 value"""
     changes.  You cannot mix in-order arguments and keyword arguments.
 
     The available fields are:
-       label,x,y,z,width,length,height,yaw,vel_x,vel_y,vel_z,score
+       label,x,y,z,width,length,height,yaw,vel_x,vel_y,vel_z
 
     :param args: complete set of field values, in .msg order
     :param kwds: use keyword arguments corresponding to message field names
@@ -129,8 +129,6 @@ uint8 value"""
         self.vel_y = 0.
       if self.vel_z is None:
         self.vel_z = 0.
-      if self.score is None:
-        self.score = 0.
     else:
       self.label = comm_msg.msg.label()
       self.x = 0.
@@ -143,7 +141,6 @@ uint8 value"""
       self.vel_x = 0.
       self.vel_y = 0.
       self.vel_z = 0.
-      self.score = 0.
 
   def _get_types(self):
     """
@@ -158,7 +155,7 @@ uint8 value"""
     """
     try:
       _x = self
-      buff.write(_get_struct_B11f().pack(_x.label.value, _x.x, _x.y, _x.z, _x.width, _x.length, _x.height, _x.yaw, _x.vel_x, _x.vel_y, _x.vel_z, _x.score))
+      buff.write(_get_struct_B10f().pack(_x.label.value, _x.x, _x.y, _x.z, _x.width, _x.length, _x.height, _x.yaw, _x.vel_x, _x.vel_y, _x.vel_z))
     except struct.error as se: self._check_types(struct.error("%s: '%s' when writing '%s'" % (type(se), str(se), str(locals().get('_x', self)))))
     except TypeError as te: self._check_types(ValueError("%s: '%s' when writing '%s'" % (type(te), str(te), str(locals().get('_x', self)))))
 
@@ -175,8 +172,8 @@ uint8 value"""
       end = 0
       _x = self
       start = end
-      end += 45
-      (_x.label.value, _x.x, _x.y, _x.z, _x.width, _x.length, _x.height, _x.yaw, _x.vel_x, _x.vel_y, _x.vel_z, _x.score,) = _get_struct_B11f().unpack(str[start:end])
+      end += 41
+      (_x.label.value, _x.x, _x.y, _x.z, _x.width, _x.length, _x.height, _x.yaw, _x.vel_x, _x.vel_y, _x.vel_z,) = _get_struct_B10f().unpack(str[start:end])
       return self
     except struct.error as e:
       raise genpy.DeserializationError(e)  # most likely buffer underfill
@@ -190,7 +187,7 @@ uint8 value"""
     """
     try:
       _x = self
-      buff.write(_get_struct_B11f().pack(_x.label.value, _x.x, _x.y, _x.z, _x.width, _x.length, _x.height, _x.yaw, _x.vel_x, _x.vel_y, _x.vel_z, _x.score))
+      buff.write(_get_struct_B10f().pack(_x.label.value, _x.x, _x.y, _x.z, _x.width, _x.length, _x.height, _x.yaw, _x.vel_x, _x.vel_y, _x.vel_z))
     except struct.error as se: self._check_types(struct.error("%s: '%s' when writing '%s'" % (type(se), str(se), str(locals().get('_x', self)))))
     except TypeError as te: self._check_types(ValueError("%s: '%s' when writing '%s'" % (type(te), str(te), str(locals().get('_x', self)))))
 
@@ -208,8 +205,8 @@ uint8 value"""
       end = 0
       _x = self
       start = end
-      end += 45
-      (_x.label.value, _x.x, _x.y, _x.z, _x.width, _x.length, _x.height, _x.yaw, _x.vel_x, _x.vel_y, _x.vel_z, _x.score,) = _get_struct_B11f().unpack(str[start:end])
+      end += 41
+      (_x.label.value, _x.x, _x.y, _x.z, _x.width, _x.length, _x.height, _x.yaw, _x.vel_x, _x.vel_y, _x.vel_z,) = _get_struct_B10f().unpack(str[start:end])
       return self
     except struct.error as e:
       raise genpy.DeserializationError(e)  # most likely buffer underfill
@@ -218,9 +215,9 @@ _struct_I = genpy.struct_I
 def _get_struct_I():
     global _struct_I
     return _struct_I
-_struct_B11f = None
-def _get_struct_B11f():
-    global _struct_B11f
-    if _struct_B11f is None:
-        _struct_B11f = struct.Struct("<B11f")
-    return _struct_B11f
+_struct_B10f = None
+def _get_struct_B10f():
+    global _struct_B10f
+    if _struct_B10f is None:
+        _struct_B10f = struct.Struct("<B10f")
+    return _struct_B10f

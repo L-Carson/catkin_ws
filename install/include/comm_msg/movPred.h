@@ -129,12 +129,12 @@ struct MD5Sum< ::comm_msg::movPred_<ContainerAllocator> >
 {
   static const char* value()
   {
-    return "f24e6d2870e7907336df86d90f0381cc";
+    return "76372f1cf63bb189fc9bb9cd43dbfca9";
   }
 
   static const char* value(const ::comm_msg::movPred_<ContainerAllocator>&) { return value(); }
-  static const uint64_t static_value1 = 0xf24e6d2870e79073ULL;
-  static const uint64_t static_value2 = 0x36df86d90f0381ccULL;
+  static const uint64_t static_value1 = 0x76372f1cf63bb189ULL;
+  static const uint64_t static_value2 = 0xfc9bb9cd43dbfca9ULL;
 };
 
 template<class ContainerAllocator>
@@ -169,7 +169,7 @@ struct Definition< ::comm_msg::movPred_<ContainerAllocator> >
 "float32 vel_x   #m/s\n"
 "float32 vel_y   #m/s\n"
 "float32 vel_z   #m/s\n"
-"float32 score   #detection confidence [0,1]\n"
+"#float32 score   #detection confidence [0,1]\n"
 "================================================================================\n"
 "MSG: comm_msg/label\n"
 "#Note: 枚举类别、枚举值、枚举顺序均不可随意改动，不然md5不匹配，消息将无法正常解析\n"

@@ -72,7 +72,7 @@
    self)
   )
 
-(setf (get comm_msg::movTarget :md5sum-) "f19f5e2e1e8db282172e91085f81c027")
+(setf (get comm_msg::movTarget :md5sum-) "ebdd992367f43878f672e9039c790714")
 (setf (get comm_msg::movTarget :datatype-) "comm_msg/movTarget")
 (setf (get comm_msg::movTarget :definition-)
       "uint32  id              #运动目标的id
@@ -95,7 +95,7 @@ float32 yaw     #rotated by z, radian(not a angle)
 float32 vel_x   #m/s
 float32 vel_y   #m/s
 float32 vel_z   #m/s
-float32 score   #detection confidence [0,1]
+#float32 score   #detection confidence [0,1]
 ================================================================================
 MSG: comm_msg/label
 #Note: 枚举类别、枚举值、枚举顺序均不可随意改动，不然md5不匹配，消息将无法正常解析
@@ -163,6 +163,6 @@ uint8 value
 
 
 
-(provide :comm_msg/movTarget "f19f5e2e1e8db282172e91085f81c027")
+(provide :comm_msg/movTarget "ebdd992367f43878f672e9039c790714")
 
 

@@ -26,6 +26,16 @@ health_topic: "/lidar_det/health"   # P3: Float32MultiArray; "" to disable
 # Leading "~" expands to $HOME. Separate from the navZero wrapper's stdout log
 # (lidar_det_node.log) to avoid two writers on one file.
 log_file: "~/map_config/log/debug/processprint/lidar_det_node_st.log"
+# Log capacity (ST log file directory). 0 = unlimited for that constraint.
+log_max_total_mb: 100        # max total size of lidar_det_node_st.log* in log dir
+log_rotate_single_mb: 20     # rotate current log when it exceeds this size (MB)
+
+# Save input point cloud to disk when abnormal frames are detected (for field debug).
+save_abnormal_cloud: true
+abnormal_cloud_dir: "~/map_config/log/debug/lidar_det_abnormal"
+abnormal_cloud_max_total_mb: 512   # max total size of saved .pcd under abnormal_cloud_dir
+abnormal_cloud_max_files: 500        # max number of .pcd files kept
+abnormal_cloud_min_interval_sec: 2.0 # min seconds between saves of the same reason
 
 # ROS I/O (kept compatible with the original pcpt_net_node contract).
 input_topic:  "/MainLidar/trans_points"
