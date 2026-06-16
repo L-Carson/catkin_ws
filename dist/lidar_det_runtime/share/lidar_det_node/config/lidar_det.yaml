@@ -39,7 +39,7 @@ abnormal_cloud_min_interval_sec: 2.0 # min seconds between saves of the same rea
 
 # ROS I/O (kept compatible with the original pcpt_net_node contract).
 input_topic:  "/MainLidar/trans_points"
-output_topic: "/trans_net/box"
+output_topic: "/box_msgs"
 marker_topic: "/detect_box_markers"
 frame_id:     ""          # empty => reuse incoming cloud header.frame_id
 lidar_height: 1.68
