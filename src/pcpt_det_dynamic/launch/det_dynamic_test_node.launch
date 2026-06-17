@@ -1,0 +1,6 @@
+<!---->
+<launch>
+    <param name="use_sim_time" value="true" />
+    <node pkg="pcpt_det_dynamic" type="pcpt_det_dynamic_node" name="pcpt_det_dynamic_node"  output="screen" />
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find pcpt_det_dynamic)/rviz/det_dynamic.rviz"/>
+</launch>
