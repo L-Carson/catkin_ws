@@ -37,9 +37,6 @@ if (1)
         else()
             set(OpenCV_VERSION "4.2")
         endif()
-    elseif(UBUNTU_VERSION STREQUAL "22.04")
-        message(STATUS "System Is Ubuntu 22.04")
-        set(OpenCV_VERSION "4.8")
     else()
         message(FATAL_ERROR "Unkown System ${UBUNTU_VERSION}")
     endif()
@@ -224,8 +221,7 @@ link_directories(
 ## either from message generation or dynamic reconfigure
 set(GEOGRAPHICLIB_PRECISION 2 CACHE STRING "Precision: 1 = float, 2 = double, 3 = extended, 4 = quadruple, 5 = variable")
 set_property(CACHE GEOGRAPHICLIB_PRECISION PROPERTY STRINGS 1 2 3 4 5)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 
 ## Declare a C++ executable
 add_library(
@@ -296,14 +292,7 @@ add_library(
     src/loc_geocentric/Math.cpp
 )
 
-# comm_msg 在 comm/comm_msg/ 下，须等消息头生成后再编 comm
-add_dependencies(comm comm_msg_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 
-# 测试程序默认不编译：预编译的 core_lib/libbasics.a 与本机 boost/工具链
-# 版本不一致会导致链接失败；库本身(libcomm.a)不受影响。
-# 需要时: catkin_make -DCOMM_BUILD_TESTS=ON
-option(COMM_BUILD_TESTS "Build comm test executables" OFF)
-if(COMM_BUILD_TESTS)
 add_executable(test_any_polygon           test/test_any_polygon.cpp)
 add_executable(test_map                   test/test_map.cpp)
 add_executable(test_time                  test/test_time.cpp)
@@ -319,7 +308,6 @@ target_link_libraries(test_geo_coord_transformer    comm ${Boost_LIBRARIES} ${Op
 target_link_libraries(test_dync_map_file            comm ${Boost_LIBRARIES} ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})
 target_link_libraries(test_geometry                 comm ${Boost_LIBRARIES} ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})
 target_link_libraries(test_module_abnormal          comm ${Boost_LIBRARIES} ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})
-endif()
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above

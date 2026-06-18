@@ -18,9 +18,9 @@
 class IMAGE_RECTS_SENDER_C
 {
 public:
-    IMAGE_RECTS_SENDER_C(ros::NodeHandle &nh)
+    IMAGE_RECTS_SENDER_C(ros::NodeHandle &nh, const std::string &strTopicName = TOPIC_NAME_VISION_DET_INFO)
     {
-        objPublisher_ = nh.advertise<comm_msg::visionRects>(TOPIC_NAME_VISION_DET_INFO, 10);
+        objPublisher_ = nh.advertise<comm_msg::visionRects>(strTopicName, 10);
     }
 
 
@@ -50,4 +50,3 @@ private:
 
 
 #endif
-

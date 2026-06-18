@@ -243,13 +243,21 @@ enum VISION_FUNC_ID_ENUM {
     VI_QR_CODE_DET = comm_msg::visionFunc::QR_CODE_DET,     //二维码检测
     VI_NET_DET     = comm_msg::visionFunc::NET_DET,         //网络检测
     VI_NET_SEG     = comm_msg::visionFunc::NET_SEG,         //网络分割
+    VI_SHORT_OBST_SEG   = 4,                                //低矮障碍物检测
+    VI_TRAFFICLIGHT_DET = 5,                                //交通灯检测
+    VI_TRASH_BOX_DET    = 6,                                //垃圾箱检测
+    VI_CLEANCLASS_DET   = 7,                                //洁净度检测
 };
 
 const std::unordered_map<VISION_FUNC_ID_ENUM, const char*> VisionFuncId({
     {VISION_FUNC_ID_ENUM::VI_NULL_FUNC,   "无视觉任务"},
     {VISION_FUNC_ID_ENUM::VI_QR_CODE_DET, "二维码检测"},
     {VISION_FUNC_ID_ENUM::VI_NET_DET,     "网络检测"},
-    {VISION_FUNC_ID_ENUM::VI_NET_SEG,     "网络分割"}
+    {VISION_FUNC_ID_ENUM::VI_NET_SEG,     "网络分割"},
+    {VISION_FUNC_ID_ENUM::VI_SHORT_OBST_SEG,     "低矮障碍分割"},
+    {VISION_FUNC_ID_ENUM::VI_TRAFFICLIGHT_DET,     "交通灯检测"},
+    {VISION_FUNC_ID_ENUM::VI_TRASH_BOX_DET,     "垃圾箱检测"},
+    {VISION_FUNC_ID_ENUM::VI_CLEANCLASS_DET,    "洁净度检测"},
 });
 
 /**
@@ -282,6 +290,7 @@ enum LABEL_ENUM {
     TAG_FISHING_ROD          = 73,                                              //钓鱼竿
     TAG_FISHING_ROD_LLM      = 75,                                              //钓鱼竿大模型检测
     TAG_TREELAWN_LLM         = 76,                                              //AI绿植检测
+    TAG_TRASH_BOX            = 77,                                              //垃圾箱
     
 
     /* 像素框数据 - 井盖类 */
@@ -381,6 +390,7 @@ const std::unordered_map<LABEL_ENUM, const char*> Label({
     {LABEL_ENUM::TAG_FISHING_ROD,               "钓鱼竿"}, 
     {LABEL_ENUM::TAG_BLACK_VEHICLE,             "黑色车辆"}, 
     {LABEL_ENUM::TAG_FISHING_ROD_LLM,           "钓鱼竿大模型检测"},
+    {LABEL_ENUM::TAG_TRASH_BOX,                 "垃圾箱检测"},
     {LABEL_ENUM::TAG_MAX,                       "占位符"}
 });
 

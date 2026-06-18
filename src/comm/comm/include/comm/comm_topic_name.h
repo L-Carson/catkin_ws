@@ -20,8 +20,14 @@
 #define TOPIC_NAME_DCAMERA_FUSED_POINTS                         "/dcamera/fused_depth_points"                                           //融合处理后的深度点云数据
 #define TOPIC_NAME_VISION_FUNC                                  "/vision_function"                                                      //视觉功能调度
 #define TOPIC_NAME_VISION_DET_INFO                              "/vision_detect"                                                        //视觉网络检测结果
+#define TOPIC_NAME_VISION_TRAFFIC_LIGHT_DET_INFO                "/vision_traffic_light_detect"                                          //视觉网络交通灯检测结果
+#define TOPIC_NAME_VISION_TRASH_BOX_DET_INFO                    "/vision_trash_box_detect"                                              //视觉网络垃圾箱检测结果
 #define TOPIC_NAME_VISION_DET_IMAGE(strCameraName_)             std::string("/camera/" + strCameraName_ + "/detect_image")              //视觉网络检测结果
+#define TOPIC_NAME_VISION_TL_DET_IMAGE(strCameraName_)          std::string("/camera/" + strCameraName_ + "/tl_detect_image")           //交通灯专项检测结果
 #define TOPIC_NAME_VISION_SEG_INFO                              "/vision_segment"                                                       //视觉网络分割结果
+#define TOPIC_NAME_VISION_GROUND_LEVEL_IMAGE(strCameraName_)    std::string("/camera/" + strCameraName_ + "/seg_ground_level_image")    //视觉网络低矮障碍物分割结果
+#define TOPIC_NAME_VISION_GROUND_LEVEL_SEG_MASK_IMAGE(strCameraName_)        std::string("/camera/" + strCameraName_ + "/seg_ground_level_mask_image")
+
 #define TOPIC_NAME_VISION_SEG_IMAGE(strCameraName_)             std::string("/camera/" + strCameraName_ + "/seg_image")
 #define TOPIC_NAME_VISION_SEG_MASK_IMAGE(strCameraName_)        std::string("/camera/" + strCameraName_ + "/seg_mask_image")
 #define TOPIC_NAME_VISION_FILTER_SEG_MASK_IMAGE(strCameraName_) std::string("/camera/" + strCameraName_ + "/filter_seg_mask_image")

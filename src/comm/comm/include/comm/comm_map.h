@@ -332,7 +332,7 @@ private:
     // 单元格数据比较器
     struct CellDataComparator
     {
-        bool operator()(const CellData &a, const CellData &b) const
+        bool operator()(const CellData &a, const CellData &b)
         {
             return (a.dis_square < b.dis_square);
         }

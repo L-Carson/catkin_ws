@@ -1,1 +1,1 @@
-visionFunc[]  funcs
+string visionFunc

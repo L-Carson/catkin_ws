@@ -69,6 +69,7 @@ public:
     const CFG_PARAM_CAR_BODY_VXL_FILTER_STRU   &GetCarBodyVxlFilterCfg(void) const;
     const CFG_PARAM_GROUND_SEG_STRU            &GetGroundSegCfg(void) const;
     const CFG_PARAM_PCPT_REGION_STRU           &GetPcptRegionCfg(void) const;
+    const CFG_PARAM_PCPT_CLOUD_PERSISTENCE_STRU &GetPcptCloudPersistenceCfg(void) const;
     const CFG_PARAM_DOUBLE_LIDAR_VERIFY_STRU   &GetDoubleLidarReflectVerifyCfg(void) const;
     const CFG_PARAM_EMERGENCE_VERIFY_STRU      &GetEmergenceReflectVerifyCfg(void) const;
     const CFG_PARAM_ROADMARK_VERIFY_STRU       &GetRoadmarkSalientVerifyCfg(void) const;

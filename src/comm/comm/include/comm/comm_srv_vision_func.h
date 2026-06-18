@@ -2,6 +2,7 @@
 #define __COMM_SRV_VISION_FUNC_H__
 
 #include "comm/comm_base.h"
+#include "comm/loc_json/json.h"
 #include "comm/comm_topic_name.h"
 #include "comm_srvs/visionFunc.h"
 #include <ros/ros.h>

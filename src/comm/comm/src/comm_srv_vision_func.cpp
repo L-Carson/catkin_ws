@@ -66,15 +66,61 @@ INT32 VISION_FUNC_C::GetParam(std::vector<VISION_FUNC_CFG_STRU> &vectFuncCfg, VI
 
     ST_LOG_INFO("Service Proc Succ.");
 
-    for (auto cfg : stRsp.visionFuncCfgArray) {
-        vectFuncCfg.push_back(VISION_FUNC_CFG_STRU(cfg.funcId, cfg.ipu, cfg.hz));
+    std::string strVisionFuncCfg = stRsp.visionFuncCfg;
+
+    ST_LOG_INFO("%s", strVisionFuncCfg.c_str());
+
+    Json::Value  objJsonVisionFuncCfgs;
+    JSONCPP_STRING   strReaderErr;
+    Json::CharReaderBuilder objReaderBuiler;
+    Json::CharReader  *pobjJsonReader = objReaderBuiler.newCharReader();
+    BOOL isSucc = pobjJsonReader->parse(strVisionFuncCfg.c_str(), strVisionFuncCfg.c_str() + strVisionFuncCfg.length(), 
+                                        &objJsonVisionFuncCfgs, &strReaderErr);
+    delete pobjJsonReader;
+    pobjJsonReader = NULL;
+    if (!isSucc) {
+        ST_LOG_ERR("objReader.parse() Fail. Err: %s.", strReaderErr.c_str());
+        return -1;
     }
 
-    stLabelCfg.vectDetLabel       = stRsp.visionLabelCfg.vectDetLabel;
-    stLabelCfg.vectSegLabel       = stRsp.visionLabelCfg.vectSegLabel;
-    stLabelCfg.isSupportThickPipe = stRsp.visionLabelCfg.isSupportThickPipe;
-    stLabelCfg.thickPipeWidth     = stRsp.visionLabelCfg.thickPipeWidth;
+    if (objJsonVisionFuncCfgs["visionFuncCfg"].isArray()) {
+        INT32 num = objJsonVisionFuncCfgs["visionFuncCfg"].size();
+        for (INT32 i = 0; i < num; i++) {
+            VISION_FUNC_CFG_STRU stVisionFuncCfg;
+            Json::Value objJsonVisionFuncCfg = objJsonVisionFuncCfgs["visionFuncCfg"][i];
+            stVisionFuncCfg.funcId   = objJsonVisionFuncCfg["funcId"].asUInt();
+            stVisionFuncCfg.isUseIpu = objJsonVisionFuncCfg["isUseIpu"].asBool();
+            stVisionFuncCfg.hz       = objJsonVisionFuncCfg["hz"].asUInt();
+            vectFuncCfg.push_back(stVisionFuncCfg);
 
+            if (stVisionFuncCfg.funcId == (UINT08)VI_NET_DET) {
+                if (objJsonVisionFuncCfg["label"].isArray()) {
+                    Json::Value objJsonLabel = objJsonVisionFuncCfg["label"];
+                    INT32 numLabel = objJsonLabel.size();
+                    for (INT32 j = 0; j < numLabel; j++) {
+                        UINT32 id = objJsonLabel[j]["id"].asUInt();
+                        stLabelCfg.vectDetLabel.push_back(id);
+                    }
+                }
+            }
+
+            if (stVisionFuncCfg.funcId == (UINT08)VI_NET_SEG) {
+                if (objJsonVisionFuncCfg["label"].isArray()) {
+                    Json::Value objJsonLabel = objJsonVisionFuncCfg["label"];
+                    INT32 numLabel = objJsonLabel.size();
+                    for (INT32 j = 0; j < numLabel; j++) {
+                        UINT32 id = objJsonLabel[j]["id"].asUInt();
+                        stLabelCfg.vectSegLabel.push_back(id);
+                        if (id == UINT32(TAG_THICKPIPE)) {
+                            stLabelCfg.isSupportThickPipe = true;
+                            stLabelCfg.thickPipeWidth = objJsonLabel[j]["attribute"]["thickPipeWidth"].asFloat();
+                        }
+                    }
+                }
+            }
+        }
+    }
+        
     ST_LOG_INFO("Succ.");
     return 0;
 }

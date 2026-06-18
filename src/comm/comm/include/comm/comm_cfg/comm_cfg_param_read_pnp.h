@@ -32,6 +32,7 @@ private:
     INT32 ReadCarBodyVxlFilterCfg(TiXmlElement *pobjCfgParam, CFG_PARAM_CAR_BODY_VXL_FILTER_STRU &stCarBodyVxlFilter);
     INT32 ReadGroundSegCfg(TiXmlElement *pobjCfgParam, CFG_PARAM_GROUND_SEG_STRU &stGroundSeg);
     INT32 ReadPnpRegionCfg(TiXmlElement *pobjCfgParam, CFG_PARAM_PCPT_REGION_STRU &stPcptRegion);
+    INT32 ReadPnpCloudPersistenceCfg(TiXmlElement *pobjCfgParam, CFG_PARAM_PCPT_CLOUD_PERSISTENCE_STRU &stPcptCloudPersistence);
     INT32 Read2dObstSegCfg(TiXmlElement *pobjCfgParam, CFG_PARAM_LAYER_HEIGHT_STRU& stLayerHeight);
     INT32 ReadMultiframeCfg(TiXmlElement *pobjCfgParam, CFG_PARAM_MUTLTIFRAME_STRU& stMultiframe);
     INT32 ReadDoubleLidarReflectVerifyCfg(TiXmlElement *pobjCfgParam, const char *element, CFG_PARAM_DOUBLE_LIDAR_VERIFY_STRU &stReflectVerify);
@@ -67,6 +68,9 @@ private:
     INT32 ReadVisionLabelCfg(TiXmlElement *pobjCfgParam, const char *element, LABEL_ENUM enLabel, vector<LABEL_ENUM>& vValidLabel);
     INT32 ReadVisionLabelThickPipeCfg(TiXmlElement *pobjCfgParam, const char *element, CFG_PARAM_LABEL_THICKPIPE_STRU& stParam);
     INT32 ReadVisionQRCodeDetCfg(TiXmlElement *pobjCfgParam, CFG_PARAM_VISION_BASE_STRU& stQRCode);
+    INT32 ReadVisionTrashBoxDetCfg(TiXmlElement *pobjCfgParam, CFG_PARAM_VISION_BASE_STRU& stTrashBoxDet);
+    INT32 ReadVisionCleanClassDetCfg(TiXmlElement *pobjCfgParam, CFG_PARAM_VISION_CLEAN_CLASS_DET_STRU& stCleanClassDet);
+    INT32 ReadVisionTrafficLightDetCfg(TiXmlElement *pobjCfgParam, CFG_PARAM_VISION_TRAFFIC_LIGHT_DET_STRU& stNetFunc);
     INT32 ReadVisionNetDetCfg(TiXmlElement *pobjCfgParam, CFG_PARAM_VISION_NET_DET_STRU& stNetFunc);
     INT32 ReadVisionNetSegCfg(TiXmlElement *pobjCfgParam, CFG_PARAM_VISION_NET_SEG_STRU& stNetFunc);
 };

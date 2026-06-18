@@ -116,6 +116,50 @@ INT32 CFG_PARAM_READ_PNP_C::ReadPnpRegionCfg(TiXmlElement *pobjCfgParam, CFG_PAR
 }
 
 /**************************************************************************************
+功能描述: 读取感知点云维持参数配置
+修改记录:
+**************************************************************************************/
+INT32 CFG_PARAM_READ_PNP_C::ReadPnpCloudPersistenceCfg(TiXmlElement *pobjCfgParam, CFG_PARAM_PCPT_CLOUD_PERSISTENCE_STRU &stPcptCloudPersistence)
+{
+    TiXmlElement *pobjPcptCloudPersistenceCfg = GetFirstChildElement(pobjCfgParam, "PcptCloudPersistence");
+    if (pobjPcptCloudPersistenceCfg == NULL) return -1;
+
+    if (GetAttribute(pobjPcptCloudPersistenceCfg, "isSupport", stPcptCloudPersistence.isSupport))
+        return -1;
+    else
+        ST_LOG_INFO("PcptCloudPersistence Cfg Param: <isSupport> = %d.", stPcptCloudPersistence.isSupport);
+
+    if (!stPcptCloudPersistence.isSupport) return 0;
+
+    INT32 rslt = 0;
+
+    TiXmlElement *pobjGroundParams = GetFirstChildElement(pobjPcptCloudPersistenceCfg, "GroundParam");
+    if (pobjGroundParams == NULL) return -1;
+    rslt += GetAttribute(pobjGroundParams, "MaxVoxelNum", stPcptCloudPersistence.maxGroundVoxelNum);
+
+    TiXmlElement *pobjNoGroundParams = GetFirstChildElement(pobjPcptCloudPersistenceCfg, "NoGroundParam");
+    if (pobjNoGroundParams == NULL) return -1;
+    rslt += GetAttribute(pobjNoGroundParams, "VoxelSize", stPcptCloudPersistence.voxelSize);
+    rslt += GetAttribute(pobjNoGroundParams, "MinR", stPcptCloudPersistence.minR);
+    rslt += GetAttribute(pobjNoGroundParams, "MaxR", stPcptCloudPersistence.maxR);
+    rslt += GetAttribute(pobjNoGroundParams, "ThetaBins", stPcptCloudPersistence.thetaBins);
+    rslt += GetAttribute(pobjNoGroundParams, "PhiBins", stPcptCloudPersistence.phiBins);
+    rslt += GetAttribute(pobjNoGroundParams, "PhiMin", stPcptCloudPersistence.phiMin);
+    rslt += GetAttribute(pobjNoGroundParams, "PhiMax", stPcptCloudPersistence.phiMax);
+
+    TiXmlElement *pobjProbabilityParams = GetFirstChildElement(pobjPcptCloudPersistenceCfg, "Probability");
+    if (pobjProbabilityParams == NULL) return -1;
+    rslt += GetAttribute(pobjProbabilityParams, "LoOCc", stPcptCloudPersistence.loOcc);
+    rslt += GetAttribute(pobjProbabilityParams, "LoFree", stPcptCloudPersistence.loFree);
+    rslt += GetAttribute(pobjProbabilityParams, "OccThresh", stPcptCloudPersistence.occThresh);
+    rslt += GetAttribute(pobjProbabilityParams, "FreeThresh", stPcptCloudPersistence.freeThresh);
+
+    if(rslt != 0) return -1;
+    ST_LOG_INFO("PcptCloudPersistence Param Read Succ.");
+    return 0;
+}
+
+/**************************************************************************************
 功能描述: 读取2维障碍分割参数配置
 修改记录:
 **************************************************************************************/
@@ -614,7 +658,7 @@ INT32 CFG_PARAM_READ_PNP_C::ReadWarehouseCfg(TiXmlElement *pobjCfgParam, CFG_PAR
 INT32 CFG_PARAM_READ_PNP_C::ReadCarBodyDenoisingCfg(TiXmlElement *pobjCfgParam, CFG_PARAM_CAR_BODY_DENOSING_STRU &stCarBodyDenoising)
 {
 
-    TiXmlElement *pobjCfg = GetFirstChildElement(pobjCfgParam, "CarBodyDenoising​​");
+    TiXmlElement *pobjCfg = GetFirstChildElement(pobjCfgParam, "CarBodyDenoising");
     if (!pobjCfg) {
         pobjCfg = GetFirstChildElement(pobjCfgParam, "CarBodyDenoising");
         if (!pobjCfg) return -1;
@@ -676,6 +720,7 @@ INT32 CFG_PARAM_READ_PNP_C::ReadPnpCfg(TiXmlElement *pobjCfgParam, CFG_PARAM_PNP
     rslt += ReadCarBodyVxlFilterCfg(   pobjPnpCfg, stPnpParam.stCarBodyVxlFilter);
     rslt += ReadGroundSegCfg(          pobjPnpCfg, stPnpParam.stGroundSeg);
     rslt += ReadPnpRegionCfg(          pobjPnpCfg, stPnpParam.stPcptRegion);
+    rslt += ReadPnpCloudPersistenceCfg(pobjPnpCfg, stPnpParam.stPcptCloudPersistence);
     rslt += ReadReflectVerifyCfg(      pobjPnpCfg, stPnpParam.stReflectVerify);
     rslt += ReadShortObstHoldCfg(      pobjPnpCfg, stPnpParam.stShortObstHold);
     rslt += ReadCommonObstHoldCfg(     pobjPnpCfg, stPnpParam.stCommonObstHold);
@@ -839,6 +884,63 @@ INT32 CFG_PARAM_READ_PNP_C::ReadVisionQRCodeDetCfg(TiXmlElement *pobjCfgParam, C
 }
 
 /**************************************************************************************
+功能描述: 读取交通灯检测任务配置
+修改记录:
+**************************************************************************************/
+INT32 CFG_PARAM_READ_PNP_C::ReadVisionTrafficLightDetCfg(TiXmlElement *pobjCfgParam, CFG_PARAM_VISION_TRAFFIC_LIGHT_DET_STRU& stNetFunc)
+{
+    if (0 != ReadVisionFuncBaseCfg(pobjCfgParam, "TrafficLightDet", stNetFunc.stParam)) return -1;
+    if (!stNetFunc.stParam.isSupport) return 0;
+
+    string strCamera = CamerasId2Str(stNetFunc.stParam.vstrCamera);
+
+    ST_LOG_INFO("************* TrafficLightDet: IPU(%d) Hz(%d) Camera(%s) *************",
+        stNetFunc.stParam.isSupportIpu, stNetFunc.stParam.hz, strCamera.c_str());
+
+    return 0;
+}
+
+/**************************************************************************************
+功能描述: 读取垃圾箱检测任务配置
+修改记录:
+**************************************************************************************/
+INT32 CFG_PARAM_READ_PNP_C::ReadVisionTrashBoxDetCfg(TiXmlElement *pobjCfgParam, CFG_PARAM_VISION_BASE_STRU& stTrashBoxDet)
+{
+    if (0 != ReadVisionFuncBaseCfg(pobjCfgParam, "TrashBoxDet", stTrashBoxDet)) return -1;
+    if (!stTrashBoxDet.isSupport) return 0;
+
+    string strCamera = CamerasId2Str(stTrashBoxDet.vstrCamera);
+
+    ST_LOG_INFO("************* TrashBoxDet: IPU(%d) Hz(%d) Camera(%s) *************",
+        stTrashBoxDet.isSupportIpu, stTrashBoxDet.hz, strCamera.c_str());
+
+    return 0;
+}
+
+/**************************************************************************************
+功能描述: 读取洁净度检测任务配置
+修改记录:
+**************************************************************************************/
+INT32 CFG_PARAM_READ_PNP_C::ReadVisionCleanClassDetCfg(TiXmlElement *pobjCfgParam, CFG_PARAM_VISION_CLEAN_CLASS_DET_STRU& stCleanClassDet)
+{
+    if (ReadVisionFuncBaseCfg(pobjCfgParam, "CleanClassDet", stCleanClassDet.stParam)) return -1;
+    if (!stCleanClassDet.stParam.isSupport) return 0;
+
+    TiXmlElement *pobjHyperParam = GetFirstChildElement(pobjCfgParam, "HyperParam");
+    if (!pobjHyperParam) return -1;
+
+    INT32 rslt = 0;
+    rslt += GetAttribute(pobjHyperParam, "length",stCleanClassDet.stDetArea.length);
+    rslt += GetAttribute(pobjHyperParam, "width", stCleanClassDet.stDetArea.width);
+    rslt += GetAttribute(pobjHyperParam, "blindSpotThreshold",stCleanClassDet.stDetArea.blindSpotThreshold);
+    if (rslt != 0) return -1;
+    ST_LOG_INFO("<CleanClass> Cfg Param: <isSupport> = %d, <length> = %f, <width> = %f, <blindSpotThreshold> = %f",
+                stCleanClassDet.stParam.isSupport, stCleanClassDet.stDetArea.length, 
+                stCleanClassDet.stDetArea.width, stCleanClassDet.stDetArea.blindSpotThreshold);
+    return 0;
+}
+
+/**************************************************************************************
 功能描述: 读取该视觉网络检测任务配置
 修改记录:
 **************************************************************************************/
@@ -879,7 +981,7 @@ INT32 CFG_PARAM_READ_PNP_C::ReadVisionNetDetCfg(TiXmlElement *pobjCfgParam, CFG_
     rslt += ReadVisionLabelCfg(pobjNetCfg, "BlackVehicle",   TAG_BLACK_VEHICLE,        stNetFunc.vValidLabel);
     rslt += ReadVisionLabelCfg(pobjNetCfg, "Car",            TAG_CAR          ,        stNetFunc.vValidLabel);
 
-
+    /*
     if (0 == ReadVisionLabelCfg(pobjNetCfg, "TrafficLight", TAG_TRAFFIC_LIGHT, stNetFunc.vValidLabel)) {
         if (IsSupportVisionLabel(stNetFunc.vValidLabel, TAG_TRAFFIC_LIGHT)) {
             stNetFunc.vValidLabel.push_back(TAG_TRAFFIC_LIGHT_OFF);
@@ -893,6 +995,7 @@ INT32 CFG_PARAM_READ_PNP_C::ReadVisionNetDetCfg(TiXmlElement *pobjCfgParam, CFG_
             stNetFunc.vValidLabel.push_back(TAG_TRAFFIC_LIGHT_YELLOW_LITE);
         }
     } else return -1;
+    */
 
     /* 对标签排序及去重 */
     std::sort(stNetFunc.vValidLabel.begin(), stNetFunc.vValidLabel.end());
@@ -961,6 +1064,9 @@ INT32 CFG_PARAM_READ_PNP_C::ReadVisionFuncCfg(TiXmlElement *pobjCfgParam, CFG_PA
     }
 
     rslt += ReadVisionQRCodeDetCfg(pobjVisionFuncCfg, stVisionFuncParam.stQRCode);
+    rslt += ReadVisionTrafficLightDetCfg(pobjVisionFuncCfg, stVisionFuncParam.stTrafficLightDet);
+    rslt += ReadVisionTrashBoxDetCfg(pobjVisionFuncCfg, stVisionFuncParam.stTrashBoxDet);
+    rslt += ReadVisionCleanClassDetCfg(pobjVisionFuncCfg, stVisionFuncParam.stCleanClassDet);
     rslt += ReadVisionNetDetCfg(   pobjVisionFuncCfg, stVisionFuncParam.stNetDet);
     rslt += ReadVisionNetSegCfg(   pobjVisionFuncCfg, stVisionFuncParam.stNetSeg);
     printf("\n");

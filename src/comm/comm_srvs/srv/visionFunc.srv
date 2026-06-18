@@ -1,5 +1,3 @@
 ---
 bool                success
-bool                isUseApi
-visionFuncCfg[]     visionFuncCfgArray
-visionLabelCfg      visionLabelCfg
+string              visionFuncCfg

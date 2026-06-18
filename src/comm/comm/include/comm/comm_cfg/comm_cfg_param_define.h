@@ -754,6 +754,30 @@ struct CFG_PARAM_PCPT_REGION_STRU {
 };
 
 /**
+ * @brief 点云维持参数结构
+ */
+
+struct CFG_PARAM_PCPT_CLOUD_PERSISTENCE_STRU {
+    BOOL    isSupport;
+    // 空间参数
+    INT32 maxGroundVoxelNum{80000}; // 地面点云维持最大体素数量
+    float voxelSize{0.5}; // 维持空间体素大小
+    float minR{0.0}; // 最小半径 
+    float maxR{150.0};  // 最大半径
+    INT32 rBins{800}; // 半径方向分辨率 固定不可开放
+    INT32 thetaBins{72}; // 航偏角分辨率
+    INT32 phiBins{36}; // 俯仰角分辨率 
+    float phiMin{-M_PI / 2}; // 最小俯仰角度
+    float phiMax{M_PI / 2}; // 最大俯仰角度
+
+    // 概率参数
+    float loOcc{0.6}; // 击中累积概率 
+    float loFree{-0.6}; // 空闲累积概率 
+    float occThresh{0.6}; // 击中概率阈值 
+    float freeThresh{0.5}; // 空闲概率阈值 
+};
+
+/**
  * @brief 点云障碍分层高度参数结构，分为上中下三层
  *
  */
@@ -936,6 +960,7 @@ struct CFG_PARAM_PNP_STRU {
     CFG_PARAM_CAR_BODY_VXL_FILTER_STRU      stCarBodyVxlFilter; // 车身体素过滤参数
     CFG_PARAM_GROUND_SEG_STRU               stGroundSeg;
     CFG_PARAM_PCPT_REGION_STRU              stPcptRegion;       // 滤波区域参数
+    CFG_PARAM_PCPT_CLOUD_PERSISTENCE_STRU   stPcptCloudPersistence; // 点云维持参数
     CFG_PARAM_LAYER_HEIGHT_STRU             stLayerHeight;      // 障碍分成参数
     CFG_PARAM_REFLECT_VERIFY_STRU           stReflectVerify;
     CFG_PARAM_SHORT_OBST_HOLD_STRU          stShortObstHold;
@@ -995,6 +1020,25 @@ struct CFG_PARAM_VISION_NET_SEG_STRU {
     CFG_PARAM_LABEL_THICKPIPE_STRU  stLabelThickPipe;   //粗水管参数
 };
 
+struct CFG_PARAM_VISION_TRAFFIC_LIGHT_DET_STRU {
+    CFG_PARAM_VISION_BASE_STRU      stParam;
+};
+
+/**
+ * @brief 洁净度功能-检测区域参数
+ *
+ */
+struct CFG_PARAM_DETECT_AREA_STRU {
+    float length{0.0};
+    float width{0.0};
+    float blindSpotThreshold{0.0};
+
+};
+struct CFG_PARAM_VISION_CLEAN_CLASS_DET_STRU {
+    CFG_PARAM_VISION_BASE_STRU      stParam;
+    CFG_PARAM_DETECT_AREA_STRU      stDetArea;   //检测区域参数
+};
+
 /**
  * @brief 视觉任务控制参数结构
  *
@@ -1002,9 +1046,12 @@ struct CFG_PARAM_VISION_NET_SEG_STRU {
 struct CFG_PARAM_VISION_FUNC_STRU {
     bool isSupport{false};
     bool isUseApi{false};
-    CFG_PARAM_VISION_BASE_STRU      stQRCode;   //二维码检测
-    CFG_PARAM_VISION_NET_DET_STRU   stNetDet;   //网络检测
-    CFG_PARAM_VISION_NET_SEG_STRU   stNetSeg;   //网络分割
+    CFG_PARAM_VISION_BASE_STRU              stQRCode;          //二维码检测
+    CFG_PARAM_VISION_NET_DET_STRU           stNetDet;          //网络检测
+    CFG_PARAM_VISION_NET_SEG_STRU           stNetSeg;          //网络分割
+    CFG_PARAM_VISION_TRAFFIC_LIGHT_DET_STRU stTrafficLightDet; //交通灯检测
+    CFG_PARAM_VISION_BASE_STRU              stTrashBoxDet;     //垃圾箱检测
+    CFG_PARAM_VISION_CLEAN_CLASS_DET_STRU   stCleanClassDet;   //洁净度检测
 };
 
 struct CFG_PARAM_DCU_INFO_STRU

@@ -280,6 +280,10 @@ const CFG_PARAM_PCPT_REGION_STRU &CFG_PARAM_C::GetPcptRegionCfg(void) const
     return stCfgParam_.stPnp.stPcptRegion;
 }
 
+const CFG_PARAM_PCPT_CLOUD_PERSISTENCE_STRU &CFG_PARAM_C::GetPcptCloudPersistenceCfg(void) const
+{
+    return stCfgParam_.stPnp.stPcptCloudPersistence;
+}
 const CFG_PARAM_LAYER_HEIGHT_STRU &CFG_PARAM_C::GetSeg2dObstCfg(void) const
 {
     return stCfgParam_.stPnp.stLayerHeight;

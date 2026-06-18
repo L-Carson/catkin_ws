@@ -78,8 +78,7 @@ target_link_libraries(
 
 add_executable(test_lidar_clbt           test/test_lidar_clbt.cpp)
 add_executable(modify_serial_num         test/modify_serial_num.cpp)
-add_executable(modify_calib_lidar_yaw    test/modify_calib_lidar_yaw.cpp)
 
 target_link_libraries(test_lidar_clbt              comm ${catkin_LIBRARIES})
 target_link_libraries(modify_serial_num            comm ${catkin_LIBRARIES})
-target_link_libraries(modify_calib_lidar_yaw       comm ${catkin_LIBRARIES})
+

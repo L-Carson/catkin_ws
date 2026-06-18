@@ -88,8 +88,7 @@ catkin_package(
     LIBRARIES
         ${MY_LIBRARIES_DIR}/libsaijie_basics.a
         ${MY_LIBRARIES_DIR}/libbasics.a
-        # libdl.so
-        ${CMAKE_DL_LIBS}
+        libdl.so
         ${catkin_LIBRARIES}
         ${Boost_LIBRARIES}
         ${CURL_LIBRARIES}
