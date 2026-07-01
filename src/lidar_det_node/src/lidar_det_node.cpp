@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <cstring>
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
@@ -50,6 +51,8 @@ struct FrameMetrics {
     size_t pts_in              = 0;
     size_t raw_det             = 0;
     size_t kept                = 0;
+    size_t skipped_unmapped    = 0;
+    size_t skipped_non_output  = 0;
     float  best_score          = 0.f;
     int    best_native_lbl     = -1;
     float  top_kept_score      = -1.f;
@@ -61,21 +64,125 @@ struct FrameMetrics {
     std::unordered_map<uint8_t, int> mapped_counts;
 };
 
-// Default nuScenes(0..9) -> comm_msg/label.msg value mapping. Overridable via
-// the ~class_map param. Unmapped ids fall back to 0 (UNKNOWN).
-std::unordered_map<int, int> defaultClassMap() {
+const sensor_msgs::PointField* findPointField(const sensor_msgs::PointCloud2& msg,
+                                              const char* name) {
+    for (const auto& field : msg.fields) {
+        if (field.name == name) return &field;
+    }
+    return nullptr;
+}
+
+float readFloatField(const sensor_msgs::PointCloud2& msg,
+                     const sensor_msgs::PointField& field,
+                     size_t point_index) {
+    if (field.count == 0 || field.offset + sizeof(float) > msg.point_step) return 0.f;
+
+    const size_t byte_offset =
+        static_cast<size_t>(point_index) * msg.point_step + field.offset;
+    if (byte_offset + sizeof(float) > msg.data.size()) return 0.f;
+
+    float value = 0.f;
+    switch (field.datatype) {
+        case sensor_msgs::PointField::FLOAT32:
+            std::memcpy(&value, &msg.data[byte_offset], sizeof(float));
+            return value;
+        case sensor_msgs::PointField::UINT8: {
+            uint8_t v = msg.data[byte_offset];
+            return static_cast<float>(v);
+        }
+        case sensor_msgs::PointField::UINT16: {
+            uint16_t v = 0;
+            std::memcpy(&v, &msg.data[byte_offset], sizeof(uint16_t));
+            return static_cast<float>(v);
+        }
+        case sensor_msgs::PointField::UINT32: {
+            uint32_t v = 0;
+            std::memcpy(&v, &msg.data[byte_offset], sizeof(uint32_t));
+            return static_cast<float>(v);
+        }
+        default:
+            return 0.f;
+    }
+}
+
+// Always convert via PointXYZ to avoid PCL warnings when intensity is missing
+// or present with a non-standard datatype/layout.
+bool fromRosMsgToCloud(const sensor_msgs::PointCloud2& msg,
+                       pcl::PointCloud<pcl::PointXYZI>& cloud) {
+    pcl::PointCloud<pcl::PointXYZ> cloud_xyz;
+    pcl::fromROSMsg(msg, cloud_xyz);
+
+    const sensor_msgs::PointField* intensity_field =
+        findPointField(msg, "intensity");
+    const bool has_intensity = intensity_field != nullptr;
+
+    cloud.resize(cloud_xyz.size());
+    for (size_t i = 0; i < cloud_xyz.size(); ++i) {
+        cloud[i].x = cloud_xyz[i].x;
+        cloud[i].y = cloud_xyz[i].y;
+        cloud[i].z = cloud_xyz[i].z;
+        cloud[i].intensity = has_intensity
+            ? readFloatField(msg, *intensity_field, i)
+            : 0.f;
+    }
+    return has_intensity;
+}
+
+// Model-native id -> comm_msg/label.msg (intermediate mapping).
+std::unordered_map<int, int> classMapNuScenes10() {
     return {
-        {0, 4},   // car             -> CAR
-        {1, 5},   // truck           -> TRUCK
-        {2, 5},   // constr. vehicle -> TRUCK
-        {3, 8},   // bus             -> BUS
-        {4, 5},   // trailer         -> TRUCK
-        {5, 23},  // barrier         -> METAL_BARRIER
-        {6, 2},   // motorcycle      -> CYCLIST
-        {7, 3},   // bicycle         -> BICYCLE
-        {8, 1},   // pedestrian      -> PEDESTRIAN
-        {9, 22},  // traffic_cone    -> TRAFFIC_CONE
+        {0, comm_msg::label::CAR},            // car
+        {1, comm_msg::label::TRUCK},          // truck
+        {2, comm_msg::label::TRUCK},          // constr. vehicle
+        {3, comm_msg::label::BUS},            // bus
+        {4, comm_msg::label::TRUCK},          // trailer
+        {5, comm_msg::label::METAL_BARRIER},  // barrier
+        {6, comm_msg::label::CYCLIST},        // motorcycle
+        {7, comm_msg::label::BICYCLE},        // bicycle
+        {8, comm_msg::label::PEDESTRIAN},     // pedestrian
+        {9, comm_msg::label::TRAFFIC_CONE},   // traffic_cone
     };
+}
+
+// Fine-tuned model: native 0=CAR, 1=CYCLIST, 2=PEDESTRIAN.
+std::unordered_map<int, int> classMapCustom3() {
+    return {
+        {0, comm_msg::label::CAR},
+        {1, comm_msg::label::CYCLIST},
+        {2, comm_msg::label::PEDESTRIAN},
+    };
+}
+
+std::unordered_map<int, int> classMapForProfile(const std::string& profile) {
+    if (profile == "custom_3") return classMapCustom3();
+    if (profile != "nuscenes_10") {
+        ST_LOG_WARN("Unknown class_map_profile '%s', using nuscenes_10.",
+                    profile.c_str());
+    }
+    return classMapNuScenes10();
+}
+
+// Collapse comm labels to the three categories published downstream.
+// Returns false when the detection should be dropped (barrier, cone, UNKNOWN, ...).
+bool collapseToOutputLabel(uint8_t comm, uint8_t& out) {
+    switch (comm) {
+        case comm_msg::label::PEDESTRIAN:
+            out = comm_msg::label::PEDESTRIAN;
+            return true;
+        case comm_msg::label::CYCLIST:
+        case comm_msg::label::BICYCLE:
+        case comm_msg::label::TRICYCLE:
+            out = comm_msg::label::CYCLIST;
+            return true;
+        case comm_msg::label::CAR:
+        case comm_msg::label::TRUCK:
+        case comm_msg::label::BUS:
+        case comm_msg::label::TRAM:
+            out = comm_msg::label::CAR;
+            return true;
+        default:
+            return false;
+    }
 }
 
 namespace fs = std::filesystem;
@@ -159,6 +266,19 @@ const char* nuScenesClassName(int native_id) {
     return "invalid";
 }
 
+const char* custom3ClassName(int native_id) {
+    static const char* kNames[] = {"CAR", "PEDESTRIAN","CYCLIST", };
+    if (native_id >= 0 && native_id < static_cast<int>(sizeof(kNames) / sizeof(kNames[0]))) {
+        return kNames[native_id];
+    }
+    return "invalid";
+}
+
+const char* nativeClassName(const std::string& profile, int native_id) {
+    if (profile == "custom_3") return custom3ClassName(native_id);
+    return nuScenesClassName(native_id);
+}
+
 // comm_msg/label.msg name for mapped output categories.
 const char* commLabelName(uint8_t mapped) {
     switch (mapped) {
@@ -169,24 +289,20 @@ const char* commLabelName(uint8_t mapped) {
         case comm_msg::label::CAR:            return "CAR";
         case comm_msg::label::TRUCK:          return "TRUCK";
         case comm_msg::label::BUS:            return "BUS";
+        case comm_msg::label::TRAM:           return "TRAM";
+        case comm_msg::label::TRICYCLE:       return "TRICYCLE";
         case comm_msg::label::TRAFFIC_CONE:   return "TRAFFIC_CONE";
         case comm_msg::label::METAL_BARRIER:  return "METAL_BARRIER";
         default:                              return "OTHER";
     }
 }
 
-// Print order matches defaultClassMap() target labels (non-zero only).
+// Published label counts (CAR / CYCLIST / PEDESTRIAN only).
 std::string formatMappedLabelCounts(const std::unordered_map<uint8_t, int>& counts) {
     static const uint8_t kOrder[] = {
         comm_msg::label::CAR,
-        comm_msg::label::TRUCK,
-        comm_msg::label::BUS,
-        comm_msg::label::PEDESTRIAN,
-        comm_msg::label::BICYCLE,
         comm_msg::label::CYCLIST,
-        comm_msg::label::METAL_BARRIER,
-        comm_msg::label::TRAFFIC_CONE,
-        comm_msg::label::UNKNOWN,
+        comm_msg::label::PEDESTRIAN,
     };
 
     std::string out;
@@ -440,6 +556,9 @@ public:
         pnh.param("verbose", verbose_, false);
         cfg.verbose = verbose_;
 
+        pnh.param<std::string>("class_map_profile", class_map_profile_, "nuscenes_10");
+        pnh.param("filter_unmapped_labels", filter_unmapped_labels_, true);
+        pnh.param("collapse_to_output_labels", collapse_to_output_labels_, true);
         loadClassMap(pnh);
         resolveDetectorModelPaths(cfg);
         logStartupParams(cfg);
@@ -539,13 +658,16 @@ private:
     }
 
     void loadClassMap(ros::NodeHandle& pnh) {
-        class_map_ = defaultClassMap();
+        class_map_ = classMapForProfile(class_map_profile_);
+        ST_LOG_INFO("class_map_profile=%s (%zu native ids)",
+                    class_map_profile_.c_str(), class_map_.size());
+
         std::map<std::string, int> override_map;
         if (pnh.getParam("class_map", override_map)) {
             for (const auto& kv : override_map) {
                 try {
                     class_map_[std::stoi(kv.first)] = kv.second;
-                    ST_LOG_INFO("class_map: native %d -> comm label %d",
+                    ST_LOG_INFO("class_map override: native %d -> comm label %d",
                                 std::stoi(kv.first), kv.second);
                 } catch (const std::exception&) {
                     ST_LOG_WARN("Ignoring non-integer class_map key '%s'.", kv.first.c_str());
@@ -553,6 +675,20 @@ private:
             }
             ST_LOG_INFO("class_map overridden with %zu entries.", override_map.size());
         }
+
+        ST_LOG_INFO("filter_unmapped_labels=%d collapse_to_output_labels=%d "
+                    "(publish CAR/CYCLIST/PEDESTRIAN only)",
+                    filter_unmapped_labels_ ? 1 : 0,
+                    collapse_to_output_labels_ ? 1 : 0);
+    }
+
+    bool shouldPublishLabel(uint8_t comm_mapped, uint8_t& out_label) const {
+        if (comm_mapped == comm_msg::label::UNKNOWN) return false;
+        if (!collapse_to_output_labels_) {
+            out_label = comm_mapped;
+            return true;
+        }
+        return collapseToOutputLabel(comm_mapped, out_label);
     }
 
     int mapLabel(int native) const {
@@ -578,15 +714,16 @@ private:
         last_cloud_recv_ = ros::Time::now();
 
         pcl::PointCloud<pcl::PointXYZI> cloud;
-        pcl::fromROSMsg(*msg, cloud);
+        const bool has_intensity = fromRosMsgToCloud(*msg, cloud);
         const size_t n = cloud.size();
 
         const std::string out_frame = frame_id_.empty() ? msg->header.frame_id : frame_id_;
 
         if (!first_cloud_received_) {
             first_cloud_received_ = true;
-            ST_LOG_INFO("first cloud: frame=%s stamp=%.3f pts=%zu",
-                        msg->header.frame_id.c_str(), msg->header.stamp.toSec(), n);
+            ST_LOG_INFO("first cloud: frame=%s stamp=%.3f pts=%zu intensity=%s",
+                        msg->header.frame_id.c_str(), msg->header.stamp.toSec(), n,
+                        has_intensity ? "yes" : "no(using 0)");
         }
 
         comm_msg::boxArray arr;
@@ -627,27 +764,38 @@ private:
                 }
                 if (d.score < static_cast<float>(score_threshold_)) continue;
 
-                if (d.label >= 0 && !isLabelMapped(d.label)) {
+                if (filter_unmapped_labels_ &&
+                    (d.label < 0 || !isLabelMapped(d.label))) {
+                    ++m.skipped_unmapped;
                     ST_LOG_SAMPLE(50, "WARN",
-                        "unmapped native label %d score=%.3f", d.label, d.score);
+                        "skip unmapped native label %d score=%.3f",
+                        d.label, d.score);
+                    continue;
+                }
+
+                const uint8_t comm_mapped =
+                    static_cast<uint8_t>(mapLabel(d.label));
+                uint8_t out_label = comm_mapped;
+                if (!shouldPublishLabel(comm_mapped, out_label)) {
+                    ++m.skipped_non_output;
+                    continue;
                 }
 
                 comm_msg::box b;
-                const uint8_t mapped = static_cast<uint8_t>(mapLabel(d.label));
-                b.label.value = mapped;
+                b.label.value = out_label;
                 b.x = d.x;  b.y = d.y;  b.z = d.z;
                 b.width = d.w;  b.length = d.l;  b.height = d.h;
                 b.yaw = d.yaw;
                 b.vel_x = d.vx;  b.vel_y = d.vy;  b.vel_z = 0.f;
                 //b.score = d.score;
                 arr.boxes.push_back(b);
-                bumpMappedLabelCount(mapped, m);
+                bumpMappedLabelCount(out_label, m);
 
                 if (d.score > best_kept_score) {
                     best_kept_score       = d.score;
                     m.top_kept_score      = d.score;
                     m.top_kept_native_lbl = d.label;
-                    m.top_kept_mapped_lbl = mapped;
+                    m.top_kept_mapped_lbl = out_label;
                     m.top_x = d.x;
                     m.top_y = d.y;
                 }
@@ -680,14 +828,12 @@ private:
 
         // P0 + P1: periodic frame / infer stats
         ST_LOG_INFO_SAMPLE(stats_interval_,
-            "frame #%llu: pts=%zu raw=%zu kept=%zu infer_ms=%.1f "
-            "best_raw=%.3f nuScenes=%s(%d)->%s frame=%s",
+            "frame #%llu: pts=%zu raw=%zu kept=%zu skip_unmap=%zu skip_other=%zu "
+            "infer_ms=%.1f best_raw=%.3f native=%s(%d) frame=%s",
             static_cast<unsigned long long>(frame_count_),
-            m.pts_in, m.raw_det, m.kept, m.infer_ms,
-            m.best_score,
-            nuScenesClassName(m.best_native_lbl), m.best_native_lbl,
-            commLabelName(static_cast<uint8_t>(
-                m.best_native_lbl >= 0 ? mapLabel(m.best_native_lbl) : 0)),
+            m.pts_in, m.raw_det, m.kept, m.skipped_unmapped, m.skipped_non_output,
+            m.infer_ms, m.best_score,
+            nativeClassName(class_map_profile_, m.best_native_lbl), m.best_native_lbl,
             out_frame.c_str());
 
         // P2: mapped comm_msg label counts (CAR/TRUCK/BUS/...)
@@ -696,11 +842,12 @@ private:
             if (m.top_kept_score >= 0.f) {
                 ST_LOG_INFO(
                     "det summary #%llu: kept=%zu {%s} "
-                    "top_kept=%s(nuScenes=%s/%d) score=%.3f pos=(%.1f,%.1f)",
+                    "top_kept=%s(native=%s/%d) score=%.3f pos=(%.1f,%.1f)",
                     static_cast<unsigned long long>(frame_count_),
                     m.kept, counts.c_str(),
                     commLabelName(m.top_kept_mapped_lbl),
-                    nuScenesClassName(m.top_kept_native_lbl), m.top_kept_native_lbl,
+                    nativeClassName(class_map_profile_, m.top_kept_native_lbl),
+                    m.top_kept_native_lbl,
                     m.top_kept_score, m.top_x, m.top_y);
             } else {
                 ST_LOG_INFO(
@@ -738,7 +885,7 @@ private:
             static_cast<float>(m.best_native_lbl),
             cnt(comm_msg::label::CAR),
             cnt(comm_msg::label::PEDESTRIAN),
-            cnt(comm_msg::label::BICYCLE),
+            cnt(comm_msg::label::CYCLIST),
         };
         pub_health_.publish(ha);
     }
@@ -794,6 +941,9 @@ private:
 
     std::unique_ptr<lidar_det::ILidarDetector> detector_;
     std::unordered_map<int, int>               class_map_;
+    std::string                                class_map_profile_ = "nuscenes_10";
+    bool                                       filter_unmapped_labels_ = true;
+    bool                                       collapse_to_output_labels_ = true;
     std::vector<float>                          buf_;
 
     std::string input_topic_, output_topic_, marker_topic_, frame_id_, health_topic_;

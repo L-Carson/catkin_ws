@@ -5,14 +5,28 @@ backend: transfusion
 # model_dir empty => auto-detect: vendor/model -> share/lidar_det_node/model
 #                                 -> 3d_target_detection/.../TransFusion/model
 # File names empty => use the defaults below. Engines are per-platform/TRT-version.
-model_dir: ""
+#
+# --- Switch model: comment one block, uncomment the other, and match class_map_profile ---
+#
+# nuScenes 10-class (open-source fast30):
 scn_onnx:    "transfusion_fast30.scn.onnx"
 bev_weights: "sparse_backbone_weights_fast30.bin"
 bev_engine:  "transfusion_bev_fast30_h100.engine"
 head_engine: "transfusion_head_fast30_fp16.engine"
+class_map_profile: nuscenes_10
+
+#x86 turn model
+# Fine-tuned 3-class (0=CAR, 1=CYCLIST, 2=PEDESTRIAN):
+# scn_onnx:    "transfusion.scn.onnx"
+# bev_weights: "sparse_backbone_weights.bin"
+# bev_engine:  "transfusion_bev.engine"
+# head_engine: "transfusion_head_fp16.engine"
+# class_map_profile: custom_3
 
 feature_num: 5
 verbose: false
+lidar_height: 1.68
+score_threshold: 0.2
 
 # Runtime diagnostics (ST_LOG -> log_file). Set debug_stats: false to silence
 # periodic frame/summary logs while keeping ERR/WARN and first-cloud log.
@@ -42,12 +56,28 @@ input_topic:  "/MainLidar/trans_points"
 output_topic: "/box_msgs"
 marker_topic: "/detect_box_markers"
 frame_id:     ""          # empty => reuse incoming cloud header.frame_id
-lidar_height: 1.68
-score_threshold: 0.1
 
 # nuScenes class id (string key) -> comm_msg/label.msg value. Overrides the
 # built-in default map; only listed ids are changed.
-class_map:
-  "0": 4    # car        -> CAR
-  "7": 3    # bicycle    -> BICYCLE
-  "8": 1    # pedestrian -> PEDESTRIAN
+# class_map:
+#   "0": 4    # car        -> CAR
+#   "7": 3    # bicycle    -> BICYCLE
+#   "8": 1    # pedestrian -> PEDESTRIAN
+# class_map_profile: nuscenes_10 | custom_3
+#   nuscenes_10 - native 0..9 (nuScenes names)
+#   custom_3    - native 0=CAR, 1=CYCLIST, 2=PEDESTRIAN
+#
+# filter_unmapped_labels: drop native ids not in the profile map (no UNKNOWN).
+# collapse_to_output_labels: publish only CAR(4) / CYCLIST(2) / PEDESTRIAN(1):
+#   TRUCK,BUS,TRAM -> CAR;  BICYCLE,TRICYCLE -> CYCLIST;  barrier/cone/etc. dropped.
+filter_unmapped_labels: true
+collapse_to_output_labels: true
+
+# class_map:
+#   "0": 4    # car        -> CAR
+#   "1": 2    # bicycle    -> BICYCLE
+#   "2": 1    # pedestrian -> PEDESTRIAN
+
+# Optional per-native-id overrides on top of class_map_profile.
+# class_map:
+#   "7": 3
