@@ -9,9 +9,13 @@ __pycache__/
 .vscode/
 *.swp
 *.log
+*.clangd
 
 # comm 预编译静态库（libbasics.a 最大 110MB，超出 GitHub 100MB 限制）
 src/comm/core_lib/lib/
 
 # 本地 comm 压缩包（约 90MB，勿提交）
 src/comm.zip
+data/
+pcpt_net_lib/
+pcpt_net_node/
