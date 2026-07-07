@@ -1,0 +1,22 @@
+<launch>
+  <!-- Full stack: fuse 3 LiDARs -> lidar_det_node on fused cloud -->
+  <arg name="fusion_config" default="$(find lidar_det_node)/config/lidar_cloud_fusion.yaml"/>
+  <arg name="det_config"    default="$(find lidar_det_node)/config/lidar_det.yaml"/>
+  <arg name="model_dir"     default=""/>
+  <!-- Set false to passthrough main only (fusion node still runs) -->
+  <arg name="fusion_enabled" default="true"/>
+  <!-- Set false to use MainLidar directly (skip fused topic) -->
+  <arg name="use_fused_input" default="true"/>
+
+  <node pkg="lidar_det_node" type="lidar_cloud_fusion_node" name="lidar_cloud_fusion" output="screen">
+    <rosparam command="load" file="$(arg fusion_config)"/>
+    <param name="fusion_enabled" value="$(arg fusion_enabled)"/>
+  </node>
+
+  <node pkg="lidar_det_node" type="lidar_det_node" name="lidar_det_node" output="screen">
+    <rosparam command="load" file="$(arg det_config)"/>
+    <param name="model_dir" value="$(arg model_dir)"/>
+    <param name="input_topic" value="/fused_lidar/trans_points" if="$(arg use_fused_input)"/>
+    <param name="input_topic" value="/MainLidar/trans_points" unless="$(arg use_fused_input)"/>
+  </node>
+</launch>

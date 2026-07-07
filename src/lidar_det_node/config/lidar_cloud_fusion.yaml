@@ -1,0 +1,38 @@
+# lidar_cloud_fusion_node — merge Main + Blind LiDAR clouds for lidar_det_node.
+#
+# Rollback (no fusion):
+#   1) Set fusion_enabled: false  (passthrough main only), or
+#   2) Stop this node and point lidar_det_node input_topic back to /MainLidar/trans_points
+
+main_topic:   "/MainLidar/trans_points"
+#main_topic:   "/BlindLidar/trans_points"
+blind1_topic: "/BlindLidar/trans_points"
+blind2_topic: "/BlindLidar2/trans_points"
+output_topic: "/fused_lidar/trans_points"
+output_frame_id: "base_link"
+
+# false => republish main cloud only (A/B test / quick rollback)
+fusion_enabled: true
+use_blind1: true
+use_blind2: true
+
+# Main stamp vs blind stamp: accept blind if (main - blind) in [-max_lead, max_age]
+blind_max_age_sec: 0.25
+blind_max_lead_sec: 0.05
+
+# Crop before publish (match TransFusion OpenPCDet range by default)
+range_filter_enabled: true
+range_min_x: -30.0
+range_max_x:  30.0
+range_min_y: -30.0
+range_max_y:  30.0
+range_min_z:  -5.0
+range_max_z:   3.0
+
+# 0 = disable voxel downsample
+voxel_leaf_size: 0.0
+
+# 0 = no cap; default 300000 matches TransFusion MAX_POINTS_NUM
+max_points: 300000
+
+stats_interval: 30

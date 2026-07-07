@@ -224,7 +224,13 @@ add_executable(bin_cloud_publisher src/bin_cloud_publisher.cpp)
 add_dependencies(bin_cloud_publisher ${catkin_EXPORTED_TARGETS})
 target_link_libraries(bin_cloud_publisher ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-install(TARGETS ${PROJECT_NAME} bin_cloud_publisher
+# Multi-LiDAR fusion (optional; independent of TransFusion backend).
+add_executable(lidar_cloud_fusion_node src/lidar_cloud_fusion_node.cpp)
+add_dependencies(lidar_cloud_fusion_node ${catkin_EXPORTED_TARGETS})
+target_include_directories(lidar_cloud_fusion_node PRIVATE ${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
+target_link_libraries(lidar_cloud_fusion_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+install(TARGETS ${PROJECT_NAME} bin_cloud_publisher lidar_cloud_fusion_node
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 # Ship the prebuilt .so next to the installed executable (matches $ORIGIN rpath)

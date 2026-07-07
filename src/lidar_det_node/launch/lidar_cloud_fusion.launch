@@ -1,0 +1,7 @@
+<launch>
+  <arg name="config" default="$(find lidar_det_node)/config/lidar_cloud_fusion.yaml"/>
+
+  <node pkg="lidar_det_node" type="lidar_cloud_fusion_node" name="lidar_cloud_fusion" output="screen">
+    <rosparam command="load" file="$(arg config)"/>
+  </node>
+</launch>
