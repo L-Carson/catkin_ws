@@ -1,4 +1,23 @@
 # lidar_det_node parameters (loaded into the node's private namespace).
+#
+# --- Point cloud input (single LiDAR vs 3-LiDAR fusion) ---
+# Default below: /MainLidar/trans_points (see input_topic).
+#
+# Fusion stack (Main + BlindLidar + BlindLidar2 -> /fused_lidar/trans_points):
+#   source devel/setup.bash
+#   roslaunch lidar_det_node lidar_det_with_fusion.launch
+#
+# Rollback / A-B test (no code change):
+#   roslaunch lidar_det_node lidar_det_with_fusion.launch fusion_enabled:=false
+#     # fusion node runs but republishes main only
+#   roslaunch lidar_det_node lidar_det_with_fusion.launch use_fused_input:=false
+#     # detection subscribes /MainLidar/trans_points again
+#   roslaunch lidar_det_node lidar_det_node.launch
+#     # original: detection only, no fusion node
+#
+# Fusion-only node (tune lidar_cloud_fusion.yaml separately):
+#   roslaunch lidar_det_node lidar_cloud_fusion.launch
+#
 backend: transfusion
 
 # Model assets (relative to model_dir).
@@ -25,8 +44,16 @@ class_map_profile: nuscenes_10
 
 feature_num: 5
 verbose: false
-lidar_height: 1.68
-score_threshold: 0.2
+lidar_height: 0.0
+
+
+# Per output-label score gate (applied after collapse_to_output_labels).
+# Omitted keys default to score_threshold above. Use stricter values to cut FP:
+#   PEDESTRIAN score is typically highest; CAR lowest (see dump stats / scripts).
+score_threshold: 0.15
+score_threshold_pedestrian: 0.22
+score_threshold_car: 0.15
+score_threshold_cyclist: 0.20
 
 # Runtime diagnostics (ST_LOG -> log_file). Set debug_stats: false to silence
 # periodic frame/summary logs while keeping ERR/WARN and first-cloud log.
@@ -51,10 +78,38 @@ abnormal_cloud_max_total_mb: 512   # max total size of saved .pcd under abnormal
 abnormal_cloud_max_files: 500        # max number of .pcd files kept
 abnormal_cloud_min_interval_sec: 2.0 # min seconds between saves of the same reason
 
+# --- TransFusion per-frame detection dump (debug / algorithm comparison) ---
+# Disabled by default: zero runtime cost when det_dump_enabled is false.
+# TSV columns: frame, stamp, class, score, box pose/size, filter_reason, published.
+det_dump_enabled: false
+# Empty => auto file under det_dump_dir with timestamp, e.g. lidar_det_dump_20260706_164100.tsv
+det_dump_file: ""
+det_dump_dir: "~/map_config/log/debug/lidar_det_dump"
+det_dump_flush_every: 30      # fflush every N frames (bag playback safety)
+det_dump_max_total_mb: 512    # prune old lidar_det_dump_*.tsv in det_dump_dir
+det_dump_max_files: 50
+# Compare two dump files: scripts/compare_det_dump.py (see --help)
+
 # ROS I/O (kept compatible with the original pcpt_net_node contract).
+# Default: single MainLidar. For 3-LiDAR fusion use launch/lidar_det_with_fusion.launch
+# or set input_topic to /fused_lidar/trans_points after starting lidar_cloud_fusion.
 input_topic:  "/MainLidar/trans_points"
+# input_topic:  "/fused_lidar/trans_points"
 output_topic: "/box_msgs"
 marker_topic: "/detect_box_markers"
+# RViz: add MarkerArray on marker_topic to see class + score + velocity on each box.
+marker_show_text: true          # e.g. "PED 0.35 v=1.20m/s (0.8,-0.9) [pedestrian]"
+marker_show_velocity: true      # show |v| and (vx,vy) in label text
+marker_show_velocity_arrow: true # ARROW marker along velocity direction (base_link)
+marker_velocity_min_mps: 0.1     # hide arrow when speed below this (m/s)
+# Arrow length (m) = max(min_length, speed * scale). Example: 1 m/s -> 3 m arrow.
+marker_velocity_arrow_scale: 6.0
+marker_velocity_arrow_min_length: 3   # minimum visible length even at low speed
+marker_velocity_arrow_shaft: 0.02       # shaft diameter (m); smaller = thinner
+marker_velocity_arrow_head: 0.05        # head diameter (m); smaller = sharper tip
+marker_color_by_class: true      # green=PED blue=CAR yellow=CYC; low score = more transparent
+marker_text_scale: 0.45         # text height in RViz
+marker_text_z_offset: 0.6       # meters above box top
 frame_id:     ""          # empty => reuse incoming cloud header.frame_id
 
 # nuScenes class id (string key) -> comm_msg/label.msg value. Overrides the

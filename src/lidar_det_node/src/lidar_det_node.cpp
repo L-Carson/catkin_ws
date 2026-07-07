@@ -53,6 +53,7 @@ struct FrameMetrics {
     size_t kept                = 0;
     size_t skipped_unmapped    = 0;
     size_t skipped_non_output  = 0;
+    size_t skipped_class_score = 0;
     float  best_score          = 0.f;
     int    best_native_lbl     = -1;
     float  top_kept_score      = -1.f;
@@ -517,6 +518,268 @@ private:
     std::map<std::string, ros::Time> last_save_;
 };
 
+struct DetDumpRecord {
+    size_t det_idx = 0;
+    lidar_det::DetectionBox det;
+    const char* filter_reason = "published";
+    bool published = false;
+    uint8_t out_label = 0;
+};
+
+struct MarkerVisItem {
+    comm_msg::box box;
+    float         score = 0.f;
+    int           native_id = -1;
+};
+
+void classMarkerColor(uint8_t out_label, float score,
+                      float& r, float& g, float& b, float& a) {
+    a = 0.55f;
+    switch (out_label) {
+        case comm_msg::label::PEDESTRIAN:
+            r = 0.2f; g = 0.95f; b = 0.2f;
+            break;
+        case comm_msg::label::CAR:
+            r = 0.2f; g = 0.45f; b = 1.0f;
+            break;
+        case comm_msg::label::CYCLIST:
+            r = 1.0f; g = 0.85f; b = 0.1f;
+            break;
+        default:
+            r = 0.0f; g = 0.9f; b = 0.93f;
+            break;
+    }
+    // Lower score -> slightly more transparent (quick FP hint in RViz).
+    if (score < 0.25f) {
+        a = 0.35f;
+    } else if (score < 0.35f) {
+        a = 0.45f;
+    }
+}
+
+std::string markerLabelText(uint8_t out_label, float score, int native_id,
+                            float vel_x, float vel_y,
+                            bool show_velocity,
+                            float velocity_min_mps,
+                            const std::string& class_map_profile) {
+    const char* short_name = "?";
+    switch (out_label) {
+        case comm_msg::label::PEDESTRIAN: short_name = "PED"; break;
+        case comm_msg::label::CAR:        short_name = "CAR"; break;
+        case comm_msg::label::CYCLIST:    short_name = "CYC"; break;
+        default:
+            short_name = commLabelName(out_label);
+            break;
+    }
+    std::ostringstream oss;
+    oss << short_name << ' ' << std::fixed << std::setprecision(2) << score;
+    if (show_velocity) {
+        const float speed = std::hypot(vel_x, vel_y);
+        oss << " v=" << std::setprecision(2) << speed << "m/s";
+        if (speed >= velocity_min_mps) {
+            oss << " (" << std::setprecision(1) << vel_x << ',' << vel_y << ')';
+        }
+    }
+    if (native_id >= 0) {
+        oss << " [" << nativeClassName(class_map_profile, native_id) << ']';
+    }
+    return oss.str();
+}
+
+// Optional per-frame TransFusion dump (TSV). Disabled by default; zero cost when off.
+class DetDumpLogger {
+public:
+    void configure(ros::NodeHandle& pnh,
+                   const std::string& backend,
+                   const std::string& class_map_profile,
+                   const std::string& input_topic,
+                   double score_threshold,
+                   double score_threshold_pedestrian,
+                   double score_threshold_car,
+                   double score_threshold_cyclist) {
+        pnh.param("det_dump_enabled", enabled_, false);
+        pnh.param<std::string>("det_dump_file", file_path_, std::string());
+        pnh.param<std::string>("det_dump_dir",
+                               dump_dir_,
+                               std::string("~/map_config/log/debug/lidar_det_dump"));
+        pnh.param("det_dump_flush_every", flush_every_, 30);
+        int max_total_mb = 512;
+        int max_files = 50;
+        pnh.param("det_dump_max_total_mb", max_total_mb, 512);
+        pnh.param("det_dump_max_files", max_files, 50);
+
+        backend_            = backend;
+        class_map_profile_  = class_map_profile;
+        input_topic_        = input_topic;
+        score_threshold_    = score_threshold;
+        score_threshold_pedestrian_ = score_threshold_pedestrian;
+        score_threshold_car_        = score_threshold_car;
+        score_threshold_cyclist_    = score_threshold_cyclist;
+        dump_dir_           = expandUserPath(dump_dir_);
+        quota_.max_total_bytes =
+            max_total_mb > 0 ? static_cast<int64_t>(max_total_mb) * 1024 * 1024 : 0;
+        quota_.max_files = max_files > 0 ? static_cast<size_t>(max_files) : 0;
+
+        if (!enabled_) return;
+
+        if (file_path_.empty()) {
+            const std::time_t now = std::time(nullptr);
+            std::tm tm_local{};
+            localtime_r(&now, &tm_local);
+            std::ostringstream name;
+            name << "lidar_det_dump_"
+                 << std::put_time(&tm_local, "%Y%m%d_%H%M%S") << ".tsv";
+            file_path_ = (fs::path(dump_dir_) / name.str()).string();
+        } else {
+            file_path_ = expandUserPath(file_path_);
+        }
+
+        if (!openFile()) {
+            enabled_ = false;
+            return;
+        }
+
+        pruneDirectoryFiles(fs::path(dump_dir_), "lidar_det_dump_", quota_);
+        ST_LOG_INFO("det dump enabled: file=%s flush_every=%d",
+                    file_path_.c_str(), flush_every_);
+    }
+
+    bool enabled() const { return enabled_; }
+
+    void logFrame(uint64_t frame_count,
+                  const sensor_msgs::PointCloud2ConstPtr& msg,
+                  const FrameMetrics& metrics,
+                  const std::string& out_frame,
+                  const std::vector<DetDumpRecord>& records) {
+        if (!enabled_ || !out_ || !msg) return;
+
+        const double stamp = msg->header.stamp.toSec();
+        if (records.empty()) {
+            writeFrameRow(frame_count, stamp, msg->header.frame_id, out_frame,
+                          metrics, -1, nullptr, "no_detection", false, 0);
+        } else {
+            for (const auto& rec : records) {
+                writeFrameRow(frame_count, stamp, msg->header.frame_id, out_frame,
+                              metrics, static_cast<int>(rec.det_idx), &rec.det,
+                              rec.filter_reason, rec.published, rec.out_label);
+            }
+        }
+
+        if (flush_every_ > 0 &&
+            frame_count % static_cast<uint64_t>(flush_every_) == 0) {
+            out_->flush();
+        }
+    }
+
+    ~DetDumpLogger() { close(); }
+
+private:
+    std::string timestampString() const {
+        const std::time_t now = std::time(nullptr);
+        std::tm tm_local{};
+        localtime_r(&now, &tm_local);
+        std::ostringstream oss;
+        oss << std::put_time(&tm_local, "%Y-%m-%d %H:%M:%S");
+        return oss.str();
+    }
+
+    bool openFile() {
+        std::error_code ec;
+        fs::create_directories(fs::path(file_path_).parent_path(), ec);
+        out_.reset(new std::ofstream(file_path_, std::ios::out | std::ios::trunc));
+        if (!out_ || !*out_) {
+            ST_LOG_ERR("det dump: cannot open %s", file_path_.c_str());
+            out_.reset();
+            return false;
+        }
+
+        *out_ << "# lidar_det_node TransFusion detection dump\n"
+              << "# created=" << timestampString() << "\n"
+              << "# backend=" << backend_
+              << " score_threshold=" << score_threshold_
+              << " score_threshold_pedestrian=" << score_threshold_pedestrian_
+              << " score_threshold_car=" << score_threshold_car_
+              << " score_threshold_cyclist=" << score_threshold_cyclist_
+              << " class_map_profile=" << class_map_profile_
+              << " input_topic=" << input_topic_ << "\n"
+              << "frame\tcloud_stamp_sec\tcloud_frame_id\tout_frame_id\t"
+              << "pts_in\tinfer_ms\traw_det\tkept\tdet_idx\tnative_id\tnative_name\t"
+              << "score\tx\ty\tz\tw\tl\th\tyaw\tvx\tvy\t"
+              << "filter_reason\tpublished\tout_label\tout_label_name\n";
+        return true;
+    }
+
+    void writeFrameRow(uint64_t frame_count,
+                       double cloud_stamp_sec,
+                       const std::string& cloud_frame_id,
+                       const std::string& out_frame_id,
+                       const FrameMetrics& metrics,
+                       int det_idx,
+                       const lidar_det::DetectionBox* det,
+                       const char* filter_reason,
+                       bool published,
+                       uint8_t out_label) {
+        if (!out_) return;
+
+        *out_ << frame_count << '\t'
+              << std::fixed << std::setprecision(6) << cloud_stamp_sec << '\t'
+              << cloud_frame_id << '\t'
+              << out_frame_id << '\t'
+              << metrics.pts_in << '\t'
+              << std::setprecision(3) << metrics.infer_ms << '\t'
+              << metrics.raw_det << '\t'
+              << metrics.kept << '\t'
+              << det_idx << '\t';
+
+        if (det == nullptr) {
+            *out_ << -1 << "\t\t"
+                  << std::setprecision(4) << 0.f << '\t'
+                  << std::setprecision(3)
+                  << 0.f << '\t' << 0.f << '\t' << 0.f << '\t'
+                  << 0.f << '\t' << 0.f << '\t' << 0.f << '\t'
+                  << 0.f << '\t' << 0.f << '\t' << 0.f << '\t'
+                  << filter_reason << '\t'
+                  << 0 << '\t' << 0 << '\t'
+                  << '\n';
+            return;
+        }
+
+        *out_ << det->label << '\t'
+              << nativeClassName(class_map_profile_, det->label) << '\t'
+              << std::setprecision(4) << det->score << '\t'
+              << std::setprecision(3)
+              << det->x << '\t' << det->y << '\t' << det->z << '\t'
+              << det->w << '\t' << det->l << '\t' << det->h << '\t'
+              << det->yaw << '\t'
+              << det->vx << '\t' << det->vy << '\t'
+              << filter_reason << '\t'
+              << (published ? 1 : 0) << '\t'
+              << static_cast<int>(out_label) << '\t'
+              << commLabelName(out_label) << '\n';
+    }
+
+    void close() {
+        if (out_) {
+            out_->flush();
+            out_.reset();
+        }
+    }
+
+    bool         enabled_ = false;
+    std::string  file_path_;
+    std::string  dump_dir_;
+    std::string  backend_;
+    std::string  class_map_profile_;
+    std::string  input_topic_;
+    double       score_threshold_ = 0.1;
+    double       score_threshold_pedestrian_ = 0.1;
+    double       score_threshold_car_ = 0.1;
+    double       score_threshold_cyclist_ = 0.1;
+    int          flush_every_     = 30;
+    StorageQuota quota_;
+    std::unique_ptr<std::ofstream> out_;
+};
+
 }  // namespace
 
 class LidarDetAdapter {
@@ -527,9 +790,20 @@ public:
         pnh.param<std::string>("input_topic",  input_topic_,  "/MainLidar/car_filtered_points");
         pnh.param<std::string>("output_topic", output_topic_, "/pcpt_net/box");
         pnh.param<std::string>("marker_topic", marker_topic_, "/detect_box_markers");
+        pnh.param("marker_show_text", marker_show_text_, true);
+        pnh.param("marker_show_velocity", marker_show_velocity_, true);
+        pnh.param("marker_show_velocity_arrow", marker_show_velocity_arrow_, true);
+        pnh.param("marker_velocity_min_mps", marker_velocity_min_mps_, 0.1);
+        pnh.param("marker_velocity_arrow_scale", marker_velocity_arrow_scale_, 3.0);
+        pnh.param("marker_velocity_arrow_min_length", marker_velocity_arrow_min_length_, 1.5);
+        pnh.param("marker_velocity_arrow_shaft", marker_velocity_arrow_shaft_, 0.05);
+        pnh.param("marker_velocity_arrow_head", marker_velocity_arrow_head_, 0.10);
+        pnh.param("marker_color_by_class", marker_color_by_class_, true);
+        pnh.param("marker_text_scale", marker_text_scale_, 0.45);
+        pnh.param("marker_text_z_offset", marker_text_z_offset_, 0.6);
         pnh.param<std::string>("frame_id",     frame_id_,     std::string());
         pnh.param("lidar_height",    lidar_height_,    1.68);
-        pnh.param("score_threshold", score_threshold_, 0.1);
+        loadScoreThresholds(pnh);
 
         pnh.param("debug_stats",       debug_stats_,       true);
         pnh.param("stats_interval",    stats_interval_,    30);
@@ -561,6 +835,10 @@ public:
         pnh.param("collapse_to_output_labels", collapse_to_output_labels_, true);
         loadClassMap(pnh);
         resolveDetectorModelPaths(cfg);
+        det_dumper_.configure(pnh, cfg.backend, class_map_profile_,
+                              input_topic_, score_threshold_,
+                              score_threshold_pedestrian_, score_threshold_car_,
+                              score_threshold_cyclist_);
         logStartupParams(cfg);
 
         detector_ = lidar_det::CreateLidarDetector(cfg);
@@ -604,9 +882,12 @@ public:
 
 private:
     void logStartupParams(const lidar_det::DetectorConfig& cfg) const {
-        ST_LOG_INFO("params: backend=%s score_threshold=%.3f lidar_height=%.2f "
+        ST_LOG_INFO("params: backend=%s score_threshold=%.3f "
+                    "per_class(ped=%.3f car=%.3f cyc=%.3f) lidar_height=%.2f "
                     "feature_num=%d verbose=%d",
-                    cfg.backend.c_str(), score_threshold_, lidar_height_,
+                    cfg.backend.c_str(), score_threshold_,
+                    score_threshold_pedestrian_, score_threshold_car_,
+                    score_threshold_cyclist_, lidar_height_,
                     cfg.feature_num, verbose_ ? 1 : 0);
         ST_LOG_INFO("params: debug_stats=%d stats_interval=%d summary_interval=%d "
                     "input_timeout_sec=%.2f",
@@ -616,9 +897,23 @@ private:
                     input_topic_.c_str(), output_topic_.c_str(), marker_topic_.c_str(),
                     frame_id_.empty() ? "<from cloud>" : frame_id_.c_str(),
                     health_topic_.empty() ? "<disabled>" : health_topic_.c_str());
+        ST_LOG_INFO("marker: show_text=%d show_velocity=%d vel_arrow=%d "
+                    "vel_min=%.2f arrow_scale=%.2f arrow_min_len=%.2f "
+                    "arrow_shaft=%.3f arrow_head=%.3f color_by_class=%d "
+                    "text_scale=%.2f z_offset=%.2f",
+                    marker_show_text_ ? 1 : 0,
+                    marker_show_velocity_ ? 1 : 0,
+                    marker_show_velocity_arrow_ ? 1 : 0,
+                    marker_velocity_min_mps_, marker_velocity_arrow_scale_,
+                    marker_velocity_arrow_min_length_,
+                    marker_velocity_arrow_shaft_, marker_velocity_arrow_head_,
+                    marker_color_by_class_ ? 1 : 0,
+                    marker_text_scale_, marker_text_z_offset_);
         ST_LOG_INFO("log quota: max_total_mb=%d rotate_single_mb=%d file=%s",
                     log_max_total_mb_, log_rotate_single_mb_,
                     log_file_path_.empty() ? "<stdout>" : log_file_path_.c_str());
+        ST_LOG_INFO("det_dump: enabled=%d",
+                    det_dumper_.enabled() ? 1 : 0);
     }
 
     void logMaintainCb(const ros::TimerEvent&) {
@@ -654,6 +949,32 @@ private:
         }
         if (m.raw_det > 0 && m.kept == 0) {
             abnormal_saver_.trySave("all_filtered", msg, cloud, frame_count_, m);
+        }
+    }
+
+    void loadScoreThresholds(ros::NodeHandle& pnh) {
+        pnh.param("score_threshold", score_threshold_, 0.1);
+        score_threshold_pedestrian_ = score_threshold_;
+        score_threshold_car_        = score_threshold_;
+        score_threshold_cyclist_    = score_threshold_;
+        pnh.param("score_threshold_pedestrian",
+                  score_threshold_pedestrian_, score_threshold_pedestrian_);
+        pnh.param("score_threshold_car",
+                  score_threshold_car_, score_threshold_car_);
+        pnh.param("score_threshold_cyclist",
+                  score_threshold_cyclist_, score_threshold_cyclist_);
+    }
+
+    float outputScoreThreshold(uint8_t out_label) const {
+        switch (out_label) {
+            case comm_msg::label::PEDESTRIAN:
+                return static_cast<float>(score_threshold_pedestrian_);
+            case comm_msg::label::CAR:
+                return static_cast<float>(score_threshold_car_);
+            case comm_msg::label::CYCLIST:
+                return static_cast<float>(score_threshold_cyclist_);
+            default:
+                return static_cast<float>(score_threshold_);
         }
     }
 
@@ -733,6 +1054,10 @@ private:
         FrameMetrics m;
         m.pts_in = n;
 
+        const bool dump_frame = det_dumper_.enabled();
+        std::vector<DetDumpRecord> dump_records;
+        std::vector<MarkerVisItem> marker_items;
+
         if (!detector_) {
             ST_LOG_ERR_SAMPLE_IF_TRUE(!detector_, 100,
                 "cloudCb: detector unavailable, publishing empty boxArray");
@@ -757,12 +1082,27 @@ private:
             m.raw_det = dets.size();
 
             float best_kept_score = -1.f;
-            for (const auto& d : dets) {
+            if (dump_frame) dump_records.reserve(dets.size());
+
+            for (size_t di = 0; di < dets.size(); ++di) {
+                const auto& d = dets[di];
                 if (d.score > m.best_score) {
                     m.best_score      = d.score;
                     m.best_native_lbl = d.label;
                 }
-                if (d.score < static_cast<float>(score_threshold_)) continue;
+
+                const char* filter_reason = "published";
+                bool published = false;
+                uint8_t out_label = 0;
+
+                if (d.score < static_cast<float>(score_threshold_)) {
+                    filter_reason = "low_score";
+                    if (dump_frame) {
+                        dump_records.push_back(
+                            {di, d, filter_reason, false, 0});
+                    }
+                    continue;
+                }
 
                 if (filter_unmapped_labels_ &&
                     (d.label < 0 || !isLabelMapped(d.label))) {
@@ -770,14 +1110,35 @@ private:
                     ST_LOG_SAMPLE(50, "WARN",
                         "skip unmapped native label %d score=%.3f",
                         d.label, d.score);
+                    filter_reason = "unmapped";
+                    if (dump_frame) {
+                        dump_records.push_back(
+                            {di, d, filter_reason, false, 0});
+                    }
                     continue;
                 }
 
                 const uint8_t comm_mapped =
                     static_cast<uint8_t>(mapLabel(d.label));
-                uint8_t out_label = comm_mapped;
+                out_label = comm_mapped;
                 if (!shouldPublishLabel(comm_mapped, out_label)) {
                     ++m.skipped_non_output;
+                    filter_reason = "filtered";
+                    if (dump_frame) {
+                        dump_records.push_back(
+                            {di, d, filter_reason, false, comm_mapped});
+                    }
+                    continue;
+                }
+
+                const float class_thr = outputScoreThreshold(out_label);
+                if (d.score < class_thr) {
+                    ++m.skipped_class_score;
+                    filter_reason = "low_score_class";
+                    if (dump_frame) {
+                        dump_records.push_back(
+                            {di, d, filter_reason, false, out_label});
+                    }
                     continue;
                 }
 
@@ -789,7 +1150,14 @@ private:
                 b.vel_x = d.vx;  b.vel_y = d.vy;  b.vel_z = 0.f;
                 //b.score = d.score;
                 arr.boxes.push_back(b);
+                marker_items.push_back({b, d.score, d.label});
                 bumpMappedLabelCount(out_label, m);
+                published = true;
+
+                if (dump_frame) {
+                    dump_records.push_back(
+                        {di, d, filter_reason, published, out_label});
+                }
 
                 if (d.score > best_kept_score) {
                     best_kept_score       = d.score;
@@ -815,11 +1183,15 @@ private:
             }
         }
 
+        if (dump_frame) {
+            det_dumper_.logFrame(frame_count_, msg, m, out_frame, dump_records);
+        }
+
         logFrameMetrics(m, out_frame);
         saveAbnormalCloudIfNeeded(msg, cloud, m);
 
         pub_box_.publish(arr);
-        publishMarkers(arr.boxes, out_frame, msg->header.stamp);
+        publishMarkers(marker_items, out_frame, msg->header.stamp);
         publishHealth(m);
     }
 
@@ -829,9 +1201,10 @@ private:
         // P0 + P1: periodic frame / infer stats
         ST_LOG_INFO_SAMPLE(stats_interval_,
             "frame #%llu: pts=%zu raw=%zu kept=%zu skip_unmap=%zu skip_other=%zu "
-            "infer_ms=%.1f best_raw=%.3f native=%s(%d) frame=%s",
+            "skip_cls_score=%zu infer_ms=%.1f best_raw=%.3f native=%s(%d) frame=%s",
             static_cast<unsigned long long>(frame_count_),
             m.pts_in, m.raw_det, m.kept, m.skipped_unmapped, m.skipped_non_output,
+            m.skipped_class_score,
             m.infer_ms, m.best_score,
             nativeClassName(class_map_profile_, m.best_native_lbl), m.best_native_lbl,
             out_frame.c_str());
@@ -890,7 +1263,7 @@ private:
         pub_health_.publish(ha);
     }
 
-    void publishMarkers(const std::vector<comm_msg::box>& boxes,
+    void publishMarkers(const std::vector<MarkerVisItem>& items,
                         const std::string& frame, const ros::Time& stamp) {
         if (pub_marker_.getNumSubscribers() == 0) return;
         visualization_msgs::MarkerArray ma;
@@ -902,26 +1275,97 @@ private:
         ma.markers.push_back(clear);
 
         int id = 0;
-        for (const auto& b : boxes) {
-            visualization_msgs::Marker m;
-            m.header.frame_id = frame;
-            m.header.stamp = stamp;
-            m.ns = "det";
-            m.id = id++;
-            m.type = visualization_msgs::Marker::CUBE;
-            m.action = visualization_msgs::Marker::ADD;
-            m.pose.position.x = b.x;
-            m.pose.position.y = b.y;
-            m.pose.position.z = b.z;
+        for (const auto& item : items) {
+            const auto& b = item.box;
+            float cr = 0.f, cg = 0.9f, cb = 0.93f, ca = 0.6f;
+            if (marker_color_by_class_) {
+                classMarkerColor(b.label.value, item.score, cr, cg, cb, ca);
+            }
+
+            visualization_msgs::Marker cube;
+            cube.header.frame_id = frame;
+            cube.header.stamp = stamp;
+            cube.ns = "det";
+            cube.id = id++;
+            cube.type = visualization_msgs::Marker::CUBE;
+            cube.action = visualization_msgs::Marker::ADD;
+            cube.pose.position.x = b.x;
+            cube.pose.position.y = b.y;
+            cube.pose.position.z = b.z;
             const double half = 0.5 * b.yaw;
-            m.pose.orientation.z = std::sin(half);
-            m.pose.orientation.w = std::cos(half);
-            m.scale.x = std::max(0.05f, b.width);
-            m.scale.y = std::max(0.05f, b.length);
-            m.scale.z = std::max(0.05f, b.height);
-            m.color.r = 0.0;  m.color.g = 0.9;  m.color.b = 0.93;  m.color.a = 0.6;
-            m.lifetime = ros::Duration(0.2);
-            ma.markers.push_back(m);
+            cube.pose.orientation.z = std::sin(half);
+            cube.pose.orientation.w = std::cos(half);
+            cube.scale.x = std::max(0.05f, b.width);
+            cube.scale.y = std::max(0.05f, b.length);
+            cube.scale.z = std::max(0.05f, b.height);
+            cube.color.r = cr;
+            cube.color.g = cg;
+            cube.color.b = cb;
+            cube.color.a = ca;
+            cube.lifetime = ros::Duration(0.2);
+            ma.markers.push_back(cube);
+
+            if (marker_show_text_) {
+                visualization_msgs::Marker text;
+                text.header.frame_id = frame;
+                text.header.stamp = stamp;
+                text.ns = "det_label";
+                text.id = id++;
+                text.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+                text.action = visualization_msgs::Marker::ADD;
+                text.pose.position.x = b.x;
+                text.pose.position.y = b.y;
+                text.pose.position.z =
+                    b.z + 0.5f * std::max(0.05f, b.height) + marker_text_z_offset_;
+                text.scale.z = marker_text_scale_;
+                text.color.r = 1.f;
+                text.color.g = 1.f;
+                text.color.b = 1.f;
+                text.color.a = 0.95f;
+                text.text = markerLabelText(
+                    b.label.value, item.score, item.native_id,
+                    b.vel_x, b.vel_y,
+                    marker_show_velocity_, marker_velocity_min_mps_,
+                    class_map_profile_);
+                text.lifetime = ros::Duration(0.2);
+                ma.markers.push_back(text);
+            }
+
+            if (marker_show_velocity_arrow_) {
+                const float speed = std::hypot(b.vel_x, b.vel_y);
+                if (speed >= static_cast<float>(marker_velocity_min_mps_)) {
+                    const double yaw_vel = std::atan2(b.vel_y, b.vel_x);
+                    const float arrow_len = std::max(
+                        static_cast<float>(marker_velocity_arrow_min_length_),
+                        speed * static_cast<float>(marker_velocity_arrow_scale_));
+
+                    visualization_msgs::Marker arrow;
+                    arrow.header.frame_id = frame;
+                    arrow.header.stamp = stamp;
+                    arrow.ns = "det_vel";
+                    arrow.id = id++;
+                    arrow.type = visualization_msgs::Marker::ARROW;
+                    arrow.action = visualization_msgs::Marker::ADD;
+                    // Place arrow base near box center, tip extends along velocity.
+                    arrow.pose.position.x =
+                        b.x + 0.5 * arrow_len * std::cos(yaw_vel);
+                    arrow.pose.position.y =
+                        b.y + 0.5 * arrow_len * std::sin(yaw_vel);
+                    arrow.pose.position.z = b.z;
+                    const double half_yaw = 0.5 * yaw_vel;
+                    arrow.pose.orientation.z = std::sin(half_yaw);
+                    arrow.pose.orientation.w = std::cos(half_yaw);
+                    arrow.scale.x = marker_velocity_arrow_shaft_;
+                    arrow.scale.y = marker_velocity_arrow_head_;
+                    arrow.scale.z = arrow_len;
+                    arrow.color.r = cr;
+                    arrow.color.g = cg;
+                    arrow.color.b = cb;
+                    arrow.color.a = 0.95f;
+                    arrow.lifetime = ros::Duration(0.2);
+                    ma.markers.push_back(arrow);
+                }
+            }
         }
         pub_marker_.publish(ma);
     }
@@ -935,6 +1379,7 @@ private:
     ros::Timer      log_maint_timer_;
 
     AbnormalCloudSaver abnormal_saver_;
+    DetDumpLogger      det_dumper_;
     std::string log_file_path_;
     int         log_max_total_mb_    = 100;
     int         log_rotate_single_mb_ = 20;
@@ -948,11 +1393,25 @@ private:
 
     std::string input_topic_, output_topic_, marker_topic_, frame_id_, health_topic_;
     double      lidar_height_        = 1.68;
-    double      score_threshold_     = 0.1;
+    double      score_threshold_             = 0.1;
+    double      score_threshold_pedestrian_  = 0.1;
+    double      score_threshold_car_         = 0.1;
+    double      score_threshold_cyclist_     = 0.1;
     double      input_timeout_sec_   = 1.0;
     int         feature_num_         = 5;
     int         stats_interval_      = 30;
     int         summary_interval_    = 60;
+    bool        marker_show_text_            = true;
+    bool        marker_show_velocity_        = true;
+    bool        marker_show_velocity_arrow_  = true;
+    bool        marker_color_by_class_       = true;
+    double      marker_text_scale_           = 0.45;
+    double      marker_text_z_offset_        = 0.6;
+    double      marker_velocity_min_mps_       = 0.1;
+    double      marker_velocity_arrow_scale_   = 3.0;
+    double      marker_velocity_arrow_min_length_ = 1.5;
+    double      marker_velocity_arrow_shaft_   = 0.05;
+    double      marker_velocity_arrow_head_    = 0.10;
     bool        verbose_             = false;
     bool        debug_stats_         = true;
     bool        first_cloud_received_ = false;
