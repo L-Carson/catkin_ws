@@ -27,6 +27,10 @@ feature_num: 5
 verbose: false
 lidar_height: 1.68
 score_threshold: 0.2
+# Intensity feature p[3]:
+#   true  = 实车，使用点云 intensity（新节点默认，实车效果更好）
+#   false = 仿真/bag，强制 p[3]=0（兼容老节点对 UINT8 intensity 的行为）
+use_intensity: true
 
 # Runtime diagnostics (ST_LOG -> log_file). Set debug_stats: false to silence
 # periodic frame/summary logs while keeping ERR/WARN and first-cloud log.
