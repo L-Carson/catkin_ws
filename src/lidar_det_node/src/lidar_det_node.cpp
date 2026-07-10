@@ -804,6 +804,9 @@ public:
         pnh.param<std::string>("frame_id",     frame_id_,     std::string());
         pnh.param("lidar_height",    lidar_height_,    1.68);
         loadScoreThresholds(pnh);
+        // true  = 把点云 intensity 写入特征 p[3]
+        // false = 强制 p[3]=0（仿真/bag 或跨雷达时更稳）
+        pnh.param("use_intensity",   use_intensity_,   false);
 
         pnh.param("debug_stats",       debug_stats_,       true);
         pnh.param("stats_interval",    stats_interval_,    30);
@@ -884,11 +887,11 @@ private:
     void logStartupParams(const lidar_det::DetectorConfig& cfg) const {
         ST_LOG_INFO("params: backend=%s score_threshold=%.3f "
                     "per_class(ped=%.3f car=%.3f cyc=%.3f) lidar_height=%.2f "
-                    "feature_num=%d verbose=%d",
+                    "feature_num=%d use_intensity=%d verbose=%d",
                     cfg.backend.c_str(), score_threshold_,
                     score_threshold_pedestrian_, score_threshold_car_,
                     score_threshold_cyclist_, lidar_height_,
-                    cfg.feature_num, verbose_ ? 1 : 0);
+                    cfg.feature_num, use_intensity_ ? 1 : 0, verbose_ ? 1 : 0);
         ST_LOG_INFO("params: debug_stats=%d stats_interval=%d summary_interval=%d "
                     "input_timeout_sec=%.2f",
                     debug_stats_ ? 1 : 0, stats_interval_, summary_interval_,
@@ -1042,9 +1045,12 @@ private:
 
         if (!first_cloud_received_) {
             first_cloud_received_ = true;
-            ST_LOG_INFO("first cloud: frame=%s stamp=%.3f pts=%zu intensity=%s",
+            ST_LOG_INFO("first cloud: frame=%s stamp=%.3f pts=%zu cloud_intensity=%s "
+                        "use_intensity=%d (p[3]=%s)",
                         msg->header.frame_id.c_str(), msg->header.stamp.toSec(), n,
-                        has_intensity ? "yes" : "no(using 0)");
+                        has_intensity ? "yes" : "no",
+                        use_intensity_ ? 1 : 0,
+                        use_intensity_ ? "cloud.intensity" : "0");
         }
 
         comm_msg::boxArray arr;
@@ -1070,7 +1076,9 @@ private:
                 p[0] = cloud[i].x;
                 p[1] = cloud[i].y;
                 p[2] = cloud[i].z - static_cast<float>(lidar_height_);
-                if (feature_num_ > 3) p[3] = cloud[i].intensity;
+                if (feature_num_ > 3) {
+                    p[3] = use_intensity_ ? cloud[i].intensity : 0.f;
+                }
                 if (feature_num_ > 4) p[4] = 0.f;
             }
 
@@ -1412,6 +1420,7 @@ private:
     double      marker_velocity_arrow_min_length_ = 1.5;
     double      marker_velocity_arrow_shaft_   = 0.05;
     double      marker_velocity_arrow_head_    = 0.10;
+    bool        use_intensity_               = false;
     bool        verbose_             = false;
     bool        debug_stats_         = true;
     bool        first_cloud_received_ = false;

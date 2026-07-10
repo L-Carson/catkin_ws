@@ -46,7 +46,6 @@ feature_num: 5
 verbose: false
 lidar_height: 0.0
 
-
 # Per output-label score gate (applied after collapse_to_output_labels).
 # Omitted keys default to score_threshold above. Use stricter values to cut FP:
 #   PEDESTRIAN score is typically highest; CAR lowest (see dump stats / scripts).
@@ -54,6 +53,12 @@ score_threshold: 0.15
 score_threshold_pedestrian: 0.22
 score_threshold_car: 0.15
 score_threshold_cyclist: 0.20
+
+# Intensity feature p[3]:
+#   true  = 使用点云 intensity（UINT8 会显式读成 0~255）
+#   false = 强制 p[3]=0（仿真/bag 或跨雷达时更稳，兼容老节点行为）
+# 当前默认 false：本车 UINT8 bag 上 true 会导致车辆召回明显下降。
+use_intensity: false
 
 # Runtime diagnostics (ST_LOG -> log_file). Set debug_stats: false to silence
 # periodic frame/summary logs while keeping ERR/WARN and first-cloud log.
