@@ -142,6 +142,7 @@ std::unordered_map<int, int> classMapNuScenes10() {
         {7, comm_msg::label::BICYCLE},        // bicycle
         {8, comm_msg::label::PEDESTRIAN},     // pedestrian
         {9, comm_msg::label::TRAFFIC_CONE},   // traffic_cone
+        {10, comm_msg::label::TRICYCLE},      // tricycle (0825 nanning 11-cls)
     };
 }
 
@@ -260,6 +261,7 @@ const char* nuScenesClassName(int native_id) {
     static const char* kNames[] = {
         "car", "truck", "constr_vehicle", "bus", "trailer",
         "barrier", "motorcycle", "bicycle", "pedestrian", "traffic_cone",
+        "tricycle",
     };
     if (native_id >= 0 && native_id < static_cast<int>(sizeof(kNames) / sizeof(kNames[0]))) {
         return kNames[native_id];
